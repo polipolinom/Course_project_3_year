@@ -1,0 +1,9 @@
+build/
+.vscode/
+build-cmake/
+.VSCodeCounter/
+build-cmake-release/
+cmake-build-debug/
+cmake-build-release/
+../.idea/
+.idea/
