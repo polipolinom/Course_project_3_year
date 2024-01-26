@@ -8,16 +8,6 @@ namespace details{
 using namespace ::svd_computation;
 
 template <typename Type>
-long double abs_under(const Vector<Type>& v, const size_t ind) {
-    long double s = 0.0;
-    for (size_t k = ind; k < v.size(); ++k) {
-        s += abs(v[k]) * abs(v[k]);
-    }
-    s = sqrtl(s);
-    return s;
-}
-
-template <typename Type>
 long double column_abs_under(const Matrix<Type>& A, const size_t row, const size_t column,
                              size_t stride = 1) {
     long double s = 0.0;
@@ -40,7 +30,7 @@ long double row_abs_under(const Matrix<Type>& A, const size_t row, const size_t 
 }
 
 template <typename Type>
-Vector<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
+Matrix<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
                            size_t stride = 1, 
                            typename Vector<Type>::Orientation orientation = Vector<Type>::Orientation::Vertical,
                            const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
@@ -49,14 +39,14 @@ Vector<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
     assert(column >= 0 && column < A.width());
     assert(stride >= 1);
 
-    Vector<Type> ans;
+    Matrix<Type> ans;
     
     long double s = 0;
     if (orientation == Vector<Type>::Orientation::Vertical) { 
-        ans = Vector<Type>(A.height(), orientation);
+        ans = Matrix<Type>(A.height(), 1);
         s = column_abs_under(A, column, row, stride);
     } else {
-        ans = Vector<Type>(A.width(), orientation);
+        ans = Matrix<Type>(1, A.width());
         s = row_abs_under(A, column, row, stride);
     }
 
@@ -69,19 +59,22 @@ Vector<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
         alpha *= A(row, column) / abs(A(row, column));
     }
 
+    long double coef = 0;
+
     if (orientation == Vector<Type>::Orientation::Vertical) {
-        ans[row] = A(row, column) - alpha;
+        ans(row, 0) = A(row, column) - alpha;
         for (size_t k = row + stride; k < A.height(); k += stride) {
-            ans[k] = A(k, column);
+            ans(k, 0) = A(k, column);
         }
+        coef = column_abs_under(ans, 0, 0);
     } else {
-        ans[column] = A(row, column) - alpha;
+        ans(0, column) = A(row, column) - alpha;
         for (size_t k = column + stride; k < A.width(); k += stride) {
-            ans[k] = A(row, k);
+            ans(0, k) = A(row, k);
         }
+        row = row_abs_under(ans, 0, 0);
     }
 
-    long double coef = abs_under(ans, 0);
     if (coef <= eps) {
         return ans;
     }
