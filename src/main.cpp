@@ -4,7 +4,8 @@
 using namespace convolution_svd::details;
 
 int main() {
-    auto ref = get_reflector(Vector<long double>({1, 2, 3}), 0);
-    std::cout << (Matrix<long double>::identity(3) - 2.0 * Matrix<long double>({ref}) * conjugate(Matrix<long double>({ref}))) * Vector<long double>({1, 2, 3});
+    Matrix<long double> A({{1, 10}, {2, 10}, {2, 10}, {3, 10}, {3, 10}});
+    auto ref = get_reflector(A, 0, 0, 2);
+    std::cout << (Matrix<long double>::identity(5) - 2.0 * Matrix<long double>({ref}) * conjugate(Matrix<long double>({ref}))) * A;
     return 0;
 }

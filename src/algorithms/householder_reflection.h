@@ -18,24 +18,67 @@ long double abs_under(const Vector<Type>& v, const size_t ind) {
 }
 
 template <typename Type>
-Vector<Type> get_reflector(const Vector<Type>& v, const size_t ind, 
+long double column_abs_under(const Matrix<Type>& A, const size_t row, const size_t column,
+                             size_t stride = 1) {
+    long double s = 0.0;
+    for (size_t k = row; k < A.height(); k += stride) {
+        s += abs(A(k, column)) * abs(A(k, column));
+    }
+    s = sqrtl(s);
+    return s;
+}
+
+template <typename Type>
+long double row_abs_under(const Matrix<Type>& A, const size_t row, const size_t column,
+                          size_t stride = 1) {
+    long double s = 0.0;
+    for (size_t k = column; k < A.width(); k += stride) {
+        s += abs(A(row, k)) * abs(A(row, k));
+    }
+    s = sqrtl(s);
+    return s;
+}
+
+template <typename Type>
+Vector<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
+                           size_t stride = 1, 
+                           typename Vector<Type>::Orientation orientation = Vector<Type>::Orientation::Vertical,
                            const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
-    assert(ind >= 0 && ind < v.size());
     
-    Vector<Type> ans(v.size());
-    long double s = abs_under(v, ind);
-     if (s <= eps) {
+    assert(row >= 0 && row < A.height());
+    assert(column >= 0 && column < A.width());
+    assert(stride >= 1);
+
+    Vector<Type> ans;
+    
+    long double s = 0;
+    if (orientation == Vector<Type>::Orientation::Vertical) { 
+        ans = Vector<Type>(A.height(), orientation);
+        s = column_abs_under(A, column, row, stride);
+    } else {
+        ans = Vector<Type>(A.width(), orientation);
+        s = row_abs_under(A, column, row, stride);
+    }
+
+    if (s <= eps) {
         return ans;
     }
 
     Type alpha = Type(s);
-    if (abs(v[ind]) > eps) {
-        alpha *= v[ind] / abs(v[ind]);
+    if (abs(A(row, column)) > eps) {
+        alpha *= A(row, column) / abs(A(row, column));
     }
 
-    ans[ind] = v[ind] - alpha;
-    for (size_t k = ind + 1; k < v.size(); ++k) {
-        ans[k] = v[k];
+    if (orientation == Vector<Type>::Orientation::Vertical) {
+        ans[row] = A(row, column) - alpha;
+        for (size_t k = row + stride; k < A.height(); k += stride) {
+            ans[k] = A(k, column);
+        }
+    } else {
+        ans[column] = A(row, column) - alpha;
+        for (size_t k = column + stride; k < A.width(); k += stride) {
+            ans[k] = A(row, k);
+        }
     }
 
     long double coef = abs_under(ans, 0);
@@ -43,6 +86,7 @@ Vector<Type> get_reflector(const Vector<Type>& v, const size_t ind,
         return ans;
     }
     ans /= coef;
+
     return ans;
 }
 } // namespace details
