@@ -1,11 +1,17 @@
 #include <iostream>
 #include "algorithms/householder_reflection.h"
+#include "algorithms/bidiagonalization.h"
 
 using namespace convolution_svd::details;
 
 int main() {
-    Matrix<long double> A({{1, 10}, {2, 10}, {2, 10}, {3, 10}, {3, 10}});
-    auto ref = get_reflector(A, 0, 0, 2);
-    std::cout << (Matrix<long double>::identity(5) - 2.0 * Matrix<long double>({ref}) * conjugate(Matrix<long double>({ref}))) * A;
+    Matrix<long double> A({{1, 2, 0, 3, 4, 0}, 
+                          {0, 1, 2, 0, 3, 4}, 
+                          {0, 0, 1, 0, 0, 3}, 
+                          {5, 6, 0, 1, 2, 0}, 
+                          {0, 5, 6, 0, 1, 2},
+                          {0, 0, 5, 0, 0, 1}});
+    conv_block_bidiagonalization(A, 3, 3);
+    std::cout << A;
     return 0;
 }
