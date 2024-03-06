@@ -33,7 +33,7 @@ long double row_abs_under(const Matrix<Type>& A, const size_t row, const size_t 
 
 template <typename Type>
 Matrix<Type> get_left_reflector(const Matrix<Type>& A, size_t row, size_t column,
-                           size_t stride = 1, size_t full = True,
+                           size_t stride = 1, size_t full = true,
                            const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     assert(row >= 0 && row < A.height());
     assert(column >= 0 && column < A.width());
@@ -47,7 +47,7 @@ Matrix<Type> get_left_reflector(const Matrix<Type>& A, size_t row, size_t column
     } else {
         ans = Matrix<Type>((A.height() - row + stride - 1) / stride, 1);
     }
-    s = column_abs_under(A, column, row, stride);
+    s = column_abs_under(A, row, column, stride);
 
     if (s <= eps) {
         return ans;
@@ -84,7 +84,7 @@ Matrix<Type> get_left_reflector(const Matrix<Type>& A, size_t row, size_t column
 
 template <typename Type>
 Matrix<Type> get_right_reflector(const Matrix<Type>& A, size_t row, size_t column,
-                           size_t stride = 1, size_t full = True,
+                           size_t stride = 1, size_t full = true,
                            const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     assert(row >= 0 && row < A.height());
     assert(column >= 0 && column < A.width());
@@ -98,7 +98,7 @@ Matrix<Type> get_right_reflector(const Matrix<Type>& A, size_t row, size_t colum
     } else {
         ans = Matrix<Type>(1, (A.width() - column + stride - 1) / stride);
     }
-    s = row_abs_under(A, column, row, stride);
+    s = row_abs_under(A, row, column, stride);
 
     if (s <= eps) {
         return ans;
@@ -137,7 +137,7 @@ Matrix<Type> get_right_reflector(const Matrix<Type>& A, size_t row, size_t colum
 
 template <typename Type>
 Matrix<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
-                           size_t stride = 1, size_t full = True,
+                           size_t stride = 1, size_t full = true,
                            typename Vector<Type>::Orientation orientation = Vector<Type>::Orientation::Vertical,
                            const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     
