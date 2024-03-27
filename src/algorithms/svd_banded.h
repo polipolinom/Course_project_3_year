@@ -140,18 +140,15 @@ Matrix<long double> apply_banded_qr(const Matrix<long double>& banded_matrix, si
     assert(band_size > 0);
 
     auto A = banded_matrix;
-    if (A.height() != A.width()) {
-        A = details::do_square(A);
-    }
 
-    if (A.height() == 1) {
+    if (A.width() == 1) {
         if (abs(A(0, 0)) <= eps) {
             return {{0.0}};
         }
         return {{A(0, 0)}};
     }
 
-    if (band_size >= banded_matrix.width()) {
+    if (band_size >= banded_matrix.width() || band_size >= banded_matrix.height()) {
         auto diag = compute_svd<long double>(banded_matrix, nullptr, nullptr, eps);
         return Matrix<long double>::diagonal(diag, banded_matrix.height(), banded_matrix.width());
     }
@@ -173,11 +170,13 @@ Matrix<long double> apply_banded_qr(const Matrix<long double>& banded_matrix, si
         first(0, 0) -= shift;
         auto v = left_segment_reflection(first, 0, band_size - 1, 0, false);
         details::mult_right_reflection_banded(A, band_size, v, 0, 0, band_size - 1);
-        for (size_t ind = 0; ind + band_size - 1 < A.height(); ++ind) {
+        for (size_t ind = 0; ind < A.height(); ++ind) {
             auto left_reflector = left_segment_reflection(A, ind, std::min(A.height() - 1, ind + band_size), ind, false);
             details::mult_left_reflection_banded(A, band_size, left_reflector, ind, std::min(A.height() - 1, ind + band_size), ind);
-            auto right_reflector = right_segment_reflection(A, ind, ind + band_size - 1, std::min(ind + band_size - 1 + band_size, A.width() - 1), false);
-            details::mult_right_reflection_banded(A, band_size, right_reflector, ind, ind + band_size - 1, std::min(ind + band_size - 1 + band_size, A.width() - 1));
+            if (ind + band_size - 1 < A.width()) {
+                auto right_reflector = right_segment_reflection(A, ind, ind + band_size - 1, std::min(ind + band_size - 1 + band_size, A.width() - 1), false);
+                details::mult_right_reflection_banded(A, band_size, right_reflector, ind, ind + band_size - 1, std::min(ind + band_size - 1 + band_size, A.width() - 1));
+            }
         }
     }
     details::set_low_values_zero(A);
