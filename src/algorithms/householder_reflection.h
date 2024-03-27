@@ -5,9 +5,9 @@
 #include "constants.h"
 
 namespace convolution_svd{
-namespace details{
-
 using namespace ::svd_computation;
+
+namespace details{
 
 template <typename Type>
 long double column_abs_under(const Matrix<Type>& A, const size_t row, const size_t column,
@@ -32,22 +32,101 @@ long double row_abs_under(const Matrix<Type>& A, const size_t row, const size_t 
 }
 
 template <typename Type>
-Matrix<Type> get_left_reflector(const Matrix<Type>& A, size_t row, size_t column,
-                           size_t stride = 1, size_t full = true,
-                           const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+long double row_abs_segment(const Matrix<Type>& A, 
+                            const size_t row, const size_t row_end,
+                            const size_t column,
+                            size_t stride = 1) {
+    long double s = 0.0;
+    for (size_t k = row; k <= row_end; k += stride) {
+        s += abs(A(k, column)) * abs(A(k, column));
+    }
+    s = sqrtl(s);
+    return s;
+}
+
+
+template <typename Type>
+long double column_abs_segment(const Matrix<Type>& A, const size_t row, 
+                            const size_t column, const size_t column_end,
+                            size_t stride = 1) {
+    long double s = 0.0;
+    for (size_t k = column; k <= column_end; k += stride) {
+        s += abs(A(row, k)) * abs(A(row, k));
+    }
+    s = sqrtl(s);
+    return s;
+}
+}// namespace details
+
+template <typename Type>
+Matrix<Type> right_segment_reflection(Matrix<Type>& A, 
+                                      size_t row, size_t column,
+                                      size_t column_end, bool change_matrix = true, 
+                                      const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+    
     assert(row >= 0 && row < A.height());
     assert(column >= 0 && column < A.width());
-    assert(stride >= 1);
+    assert(column_end >= column && column_end < A.width());
 
-    Matrix<Type> ans;
+    Matrix<Type> ans(1, column_end - column + 1);
     
     long double s = 0;
-     if (full) {
-        ans = Matrix<Type>(A.height(), 1);
-    } else {
-        ans = Matrix<Type>((A.height() - row + stride - 1) / stride, 1);
+    s = details::column_abs_segment(A, row, column, column_end);
+
+    Type alpha = Type(s);
+    if (abs(A(row, column)) > eps) {
+        alpha *= A(row, column) / abs(A(row, column));
     }
-    s = column_abs_under(A, row, column, stride);
+
+    if (s <= eps) {
+        return ans;
+    }
+
+    long double coef = 0;
+
+    ans(0, 0) = A(row, column) - alpha;
+    for (size_t k = column + 1; k <= column_end; ++k) {
+        ans(0, k - column) = A(row, k);
+    }
+    coef = details::row_abs_under(ans, 0, 0);
+
+
+    if (coef <= eps) {
+        return ans;
+    }
+    ans /= coef;
+
+    if (change_matrix) {
+        Vector<Type> tmp(A.height());
+        for (size_t ind = 0; ind < tmp.size(); ++ind) {
+            for (size_t j = column; j <= column_end; ++j) {
+                tmp[ind] += A(ind, j) * ans(0, j - column);
+            }
+        }
+
+        for (size_t k = 0; k < A.height(); ++k) {
+            for (size_t ind = column; ind <= column_end; ++ind) {
+                A(k, ind) -= Type(2.0) * tmp[k] * ans(0, ind - column);
+            }
+        }   
+    }
+    return ans;
+}
+
+template <typename Type>
+Matrix<Type> left_segment_reflection(Matrix<Type>& A, 
+                                     size_t row, size_t row_end,
+                                     size_t column, bool change_matrix = true, 
+                                     const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+    
+    assert(row >= 0 && row < A.height());
+    assert(column >= 0 && column < A.width());
+    assert(row_end >= row && row_end < A.height());
+
+    Matrix<Type> ans(1, row_end - row + 1);
+    
+    long double s = 0;
+    s = details::row_abs_segment(A, row, row_end, column);
 
     if (s <= eps) {
         return ans;
@@ -60,70 +139,11 @@ Matrix<Type> get_left_reflector(const Matrix<Type>& A, size_t row, size_t column
 
     long double coef = 0;
 
-    if (full) {
-        ans(row, 0) = A(row, column) - alpha;
-    } else {
-        ans(0, 0) = A(row, column) - alpha;
+    ans(0, 0) = A(row, column) - alpha;
+    for (size_t k = row + 1; k <= row_end; ++k) {
+        ans(0, k - row) = A(k, column);
     }
-    for (size_t k = row + stride; k < A.height(); k += stride) {
-        if (full) {
-            ans(k, 0) = A(k, column);
-        } else {
-            ans((k - row) / stride, 0) = A(k, column);
-        }
-    }
-    coef = column_abs_under(ans, 0, 0);
-
-    if (coef <= eps) {
-        return ans;
-    }
-    ans /= coef;
-
-    return ans;
-}
-
-template <typename Type>
-Matrix<Type> get_right_reflector(const Matrix<Type>& A, size_t row, size_t column,
-                           size_t stride = 1, size_t full = true,
-                           const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
-    assert(row >= 0 && row < A.height());
-    assert(column >= 0 && column < A.width());
-    assert(stride >= 1);
-
-    Matrix<Type> ans;
-    
-    long double s = 0;
-    if (full) {
-        ans = Matrix<Type>(1, A.width());
-    } else {
-        ans = Matrix<Type>(1, (A.width() - column + stride - 1) / stride);
-    }
-    s = row_abs_under(A, row, column, stride);
-
-    if (s <= eps) {
-        return ans;
-    }
-
-    Type alpha = Type(s);
-    if (abs(A(row, column)) > eps) {
-        alpha *= A(row, column) / abs(A(row, column));
-    }
-
-    long double coef = 0;
-
-    if (full) {
-        ans(0, column) = A(row, column) - alpha;
-    } else {
-        ans(0, 0) = A(row, column) - alpha;
-    }
-    for (size_t k = column + stride; k < A.width(); k += stride) {
-        if (full) {
-            ans(0, k) = A(row, k);
-        } else {
-            ans(0, (k - column) / stride) = A(row, k);
-        }
-    }
-    coef = row_abs_under(ans, 0, 0);
+    coef = details::row_abs_under(ans, 0, 0);
 
 
     if (coef <= eps) {
@@ -131,25 +151,20 @@ Matrix<Type> get_right_reflector(const Matrix<Type>& A, size_t row, size_t colum
     }
     ans /= coef;
 
+    if (change_matrix) {
+        Vector<Type> tmp(A.width());
+        for (size_t ind = 0; ind < tmp.size(); ++ind) {
+            for (size_t j = row; j <= row_end; ++j) {
+                tmp[ind] += A(j, ind) * ans(0, j - row);
+            }
+        }
+
+        for (size_t k = 0; k < A.width(); ++k) {
+            for (size_t ind = row; ind <= row_end; ++ind) {
+                A(ind, k) -= Type(2.0) * tmp[k] * ans(0, ind - row);
+            }
+        }   
+    }
     return ans;
 }
-
-
-template <typename Type>
-Matrix<Type> get_reflector(const Matrix<Type>& A, size_t row, size_t column,
-                           size_t stride = 1, size_t full = true,
-                           typename Vector<Type>::Orientation orientation = Vector<Type>::Orientation::Vertical,
-                           const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
-    
-    assert(row >= 0 && row < A.height());
-    assert(column >= 0 && column < A.width());
-    assert(stride >= 1);
-
-    if (orientation == Vector<Type>::Orientation::Vertical) {
-       return get_left_reflector(A, row, column, stride, full, eps);
-    } else {
-        return get_right_reflector(A, row, column, stride, full, eps);
-    }
-}
-} // namespace details
 } // namespace convolution_svd

@@ -25,3 +25,5 @@ add_executable(course_project_3 src/main.cpp)
 # add_test(NAME test_all COMMAND course_project_test)
 
 target_include_directories(course_project_3 PUBLIC SVD_course_project_2_year/course-project-second-year)
+add_subdirectory(SVD_course_project_2_year/course-project-second-year)
+target_link_libraries(course_project_3 course_project_lib)
