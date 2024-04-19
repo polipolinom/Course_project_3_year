@@ -133,6 +133,24 @@ inline bool split(Matrix<long double>& A, size_t band_size,
     }
     return false;
 }
+
+inline bool erase_small_diagonal(Matrix<long double>& A, size_t band_size, 
+                                 const long double eps = constants::DEFAULT_EPSILON) {
+    using Matrix = Matrix<long double>;
+
+    for (size_t k = 0; k < A.height(); ++k) {
+        if (abs(A(k, k)) < eps) {
+            for (size_t ind = k + 1; ind < A.height(); ++ind) {
+                auto left_reflector = left_segment_reflection(A, ind, std::min(A.height() - 1, ind + band_size), ind, false);
+                details::mult_left_reflection_banded(A, band_size, left_reflector, ind, std::min(A.height() - 1, ind + band_size), ind);
+            }
+            std::cout << k << std::endl;
+            std::cout << A << std::endl;
+            break;
+        }
+    }
+    return 0;
+}
 } // namespace details
 
 Matrix<long double> apply_banded_qr(const Matrix<long double>& banded_matrix, size_t band_size,
@@ -161,7 +179,11 @@ Matrix<long double> apply_banded_qr(const Matrix<long double>& banded_matrix, si
             return A;
         }
 
-         if (details::is_diagonal(A)) {
+        /*if (details::erase_small_diagonal(A, band_size, eps)) {
+            return A;
+        }*/
+
+         if (details::is_diagonal_banded(A, band_size)) {
             break;
         }
 

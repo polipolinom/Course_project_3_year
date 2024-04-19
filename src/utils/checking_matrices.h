@@ -22,6 +22,22 @@ bool is_diagonal(const Matrix<Type>& A, const long double eps = constants::DEFAU
     return true;
 }
 
+
+template <typename Type>
+bool is_diagonal_banded(const Matrix<Type>& A, const size_t band_size, const long double eps = constants::DEFAULT_EPSILON) {
+    if (A.height() != A.width()) {
+        return false;
+    }
+    for (size_t i = 0; i < A.height(); ++i) {
+        for (size_t j = 0; j < std::min(A.width(), i + band_size); ++j) {
+            if (i != j && abs(A(i, j)) > eps) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 template <typename Type>
 bool is_zero(const Matrix<Type>& A, const long double eps = constants::DEFAULT_EPSILON) {
     for (int i = 0; i < A.height(); ++i) {
