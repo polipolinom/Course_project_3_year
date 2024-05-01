@@ -35,14 +35,14 @@ long double wilkinson_shift(const Matrix<long double>& A, size_t k, size_t row, 
     assert(row > 0 && column > 0);
     assert(row < A.height() && column < A.width());
     long double a1 = 0, a2 = 0, b = 0;
-    for (size_t i = row - 1; i < std::min(column + 1, row - 1 + k); ++i) {
-        a1 += A(row - 1, i) * A(row - 1, i);
+    for (size_t i = std::max(0, (int)column - (int)k - 2); i <= row; ++i) {
+        a1 += A(i, column - 1) * A(i, column - 1);
     }
-    for (size_t i = row; i < std::min(column + 1, row + k); ++i) {
-        a2 += A(row, i) * A(row, i);
+    for (size_t i = std::max(0, (int)column - (int)k - 1); i <= row; ++i) {
+        a2 += A(i, column) * A(i, column);
     }
-    for (size_t i = row; i < std::min(column + 1, row + k); ++i) {
-        b += A(row, i) * A(row - 1, i);
+    for (size_t i = std::max(0, (int)column - (int)k - 1); i <= row; ++i) {
+        b += A(i, column) * A(i, column - 1);
     }
     // std::cout << a1 << " " << a2 << " " << b << std::endl;
     long double delta = (a1 - a2) / 2;
@@ -57,30 +57,30 @@ Matrix<long double> shift_riley2(const Matrix<long double>& A, size_t k, size_t 
     assert(row_end > row_start && column_end > column_start);
     assert(row_end < A.height() && column_end < A.width());
     long double a1 = 0, a2 = 0, b = 0;
-    for (size_t i = row_end - 1; i < std::min(column_end + 1, row_end - 1 + k); ++i) {
-        a1 += A(row_end - 1, i) * A(row_end - 1, i);
+    for (size_t i = std::max(0, (int)column_end - (int)k - 2); i <= row_end; ++i) {
+        a1 += A(i, column_end - 1) * A(i, column_end - 1);
     }
-    for (size_t i = row_end; i < std::min(column_end + 1, row_end + k); ++i) {
-        a2 += A(row_end, i) * A(row_end, i);
+    for (size_t i = std::max(0, (int)column_end - (int)k - 1); i <= row_end; ++i) {
+        a2 += A(i, column_end) * A(i, column_end);
     }
-    for (size_t i = row_end; i < std::min(column_end + 1, row_end + k); ++i) {
-        b += A(row_end, i) * A(row_end - 1, i);
+    for (size_t i = std::max(0, (int)column_end - (int)k - 1); i <= row_end; ++i) {
+        b += A(i, column_end) * A(i, column_end - 1);
     }
 
     Matrix<long double> first(column_end - column_start + 1, 1);
     for (size_t i = column_start; i <= std::min(column_end, column_start + k - 1); ++i) {
-        first(i - column_start, 1) = A(row_start, i) * A(row_start, column_start);
+        first(i - column_start, 0) = A(row_start, i) * A(row_start, column_start);
     }
-    Matrix<long double> mid_first(row_end - row_start + 1, 1);
+    Matrix<long double> mid(row_end - row_start + 1, 1);
     for (size_t i = row_start; i < std::min(row_end + 1, row_start + k); ++i) {
         for (size_t j = 0; j < std::min(k, column_end - column_start + 1); ++j) {
-            mid_first(i - row_start, 1) += A(i, j + column_start) * first(j, 0);
+            mid(i - row_start, 0) += A(i, j + column_start) * first(j, 0);
         }
     }
     Matrix<long double> second(column_end - column_start + 1, 1);
     for (size_t i = column_start; i < std::min(column_end + 1, column_start + 2 * k); ++i) {
         for (size_t j = 0; j < std::min(k, row_end - row_start + 1); ++j) {
-            second(i - column_start, 1) += A(j + row_start, i) * first(j, 0);
+            second(i - column_start, 0) += A(j + row_start, i) * mid(j, 0);
         }
     }
 
@@ -99,17 +99,6 @@ long double sum_square(const Matrix<long double>& A, size_t row, size_t column, 
         }
     }
     return sum;
-}
-
-std::vector<long double> join_vector(const std::vector<long double>& v1, const std::vector<long double>& v2) {
-    std::vector<long double> res(v1.size() + v2.size());
-    for (size_t i = 0; i < v1.size(); ++i) {
-        res[i] = v1[i];
-    }
-    for (size_t i = 0; i < v2.size(); ++i) {
-        res[i + v1.size()] = v2[i];
-    }
-    return res;
 }
 
 inline std::vector<long double> split(Matrix<long double>& A, size_t band_size, size_t row_start, size_t column_start,
@@ -191,7 +180,7 @@ std::vector<long double> apply_banded_qr(Matrix<long double>& A, size_t band_siz
         auto shift = details::wilkinson_shift(A, band_size, row_end, column_end, eps);
         Matrix<long double> first(column_end - column_start + 1, 1);
         for (size_t i = column_start; i <= std::min(column_end, column_start + band_size - 1); ++i) {
-            first(i - column_start, 1) = A(row_start, i) * A(row_start, column_start);
+            first(i - column_start, 0) = A(row_start, i) * A(row_start, column_start);
         }
         first(0, 0) -= shift;
         auto v = left_segment_reflection(first, 0, band_size - 1, 0, false);
