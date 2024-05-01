@@ -18,12 +18,12 @@ int main() {
     size_t image_width = 10;
     auto A = correlation_conv({{kernel1}}, image_height, image_width);
     size_t band_size = A.width() - A.height() + 1;
-    auto ans = svd_banded(A, band_size);
+    auto ans = apply_banded_qr(A, band_size, 0, 0, A.height() - 1, A.width() - 1);
     for (auto i : ans) {
         std::cout << i << " ";
     }
     std::cout << std::endl;
-    std::cout << "[";
+    /*std::cout << "[";
     for (size_t i = 0; i < A.height(); ++i) {
         std::cout << "[";
         for (size_t j = 0; j < A.width(); ++j) {
@@ -31,6 +31,6 @@ int main() {
         }
         std::cout << "],\n";
     }
-    std::cout << "]";
+    std::cout << "]";*/
     return 0;
 }

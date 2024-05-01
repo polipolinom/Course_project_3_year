@@ -17,7 +17,7 @@ using namespace svd_computation;
 
 std::vector<long double> svd_banded(Matrix<long double> A, size_t band_width,
                                     const long double eps = constants::DEFAULT_EPSILON) {
-    auto ans = apply_banded_qr(A, band_width, eps);
+    auto ans = apply_banded_qr(A, band_width, 0, 0, A.height() - 1, A.width() - 1, eps);
     std::sort(ans.begin(), ans.end(), std::greater<long double>());
     return ans;
 }
