@@ -12,6 +12,16 @@ using namespace ::svd_computation;
 
 namespace details {
 
+inline long double sign(long double x, long double eps) {
+    if (x >= eps) {
+        return 1;
+    }
+    if (x < -eps) {
+        return -1;
+    }
+    return 0;
+}
+
 template <typename Type>
 long double column_abs_under(const Matrix<Type>& A, const size_t row, const size_t column, size_t stride = 1) {
     long double s = 0.0;
@@ -58,12 +68,44 @@ long double column_abs_segment(const Matrix<Type>& A, size_t row, size_t column,
     return s;
 }
 
-void mult_left_reflection_banded(Matrix<long double>& A, size_t band_size, Matrix<long double>& reflector,
-                                 const size_t row, const size_t row_end, const size_t column) {
+template <typename Type>
+long double all_zeros_column(const Matrix<Type>& A, size_t row, size_t column, size_t column_end, long double eps) {
+    if (column_end < column) {
+        std::swap(column, column_end);
+    }
+    for (size_t k = column + 1; k <= column_end; k += 1) {
+        if (std::abs(A(row, k)) > eps) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename Type>
+long double all_zeros_row(const Matrix<Type>& A, size_t row, size_t row_end, size_t column, long double eps) {
+    if (row_end < row) {
+        std::swap(row, row_end);
+    }
+    for (size_t k = row + 1; k <= row_end; k += 1) {
+        if (std::abs(A(k, column)) > eps) {
+            return false;
+        }
+    }
+    return true;
+}
+
+inline void mult_left_reflection_banded(Matrix<long double>& A, size_t band_size, Matrix<long double>& reflector,
+                                        const size_t row, const size_t row_end, const size_t column, bool set_zero,
+                                        const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     assert(row >= 0 && row < A.height());
     assert(row_end >= row && row_end < A.height());
     assert(column >= 0 && column <= A.width());
 
+    for (size_t ind = 0; ind < reflector.width(); ++ind) {
+        if (std::abs(reflector(0, ind)) < eps) {
+            reflector(0, ind) = 0;
+        }
+    }
     Vector<long double> tmp(4 * band_size);
     for (size_t ind = 0; ind < tmp.size(); ++ind) {
         int i = (int)(ind + column) - 2 * (int)band_size;
@@ -84,14 +126,25 @@ void mult_left_reflection_banded(Matrix<long double>& A, size_t band_size, Matri
             A(ind, i) -= 2.0 * tmp[k] * reflector(0, ind - row);
         }
     }
+    if (set_zero) {
+        for (size_t i = row + 1; i <= row_end; ++i) {
+            A(i, column) = 0.0;
+        }
+    }
 }
 
-void mult_right_reflection_banded(Matrix<long double>& A, size_t band_size, Matrix<long double>& reflector,
-                                  const size_t row, const size_t column, const size_t column_end) {
+inline void mult_right_reflection_banded(Matrix<long double>& A, size_t band_size, Matrix<long double>& reflector,
+                                         const size_t row, const size_t column, const size_t column_end, bool set_zero,
+                                         const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     assert(row >= 0 && row < A.height());
     assert(column_end >= column && column_end < A.width());
     assert(column >= 0 && column <= A.width());
 
+    for (size_t ind = 0; ind < reflector.width(); ++ind) {
+        if (std::abs(reflector(0, ind)) < eps) {
+            reflector(0, ind) = 0;
+        }
+    }
     Vector<long double> tmp(4 * band_size);
     for (size_t ind = 0; ind < tmp.size(); ++ind) {
         int i = (int)(ind + row) - 2 * (int)band_size;
@@ -112,6 +165,11 @@ void mult_right_reflection_banded(Matrix<long double>& A, size_t band_size, Matr
             A(i, ind) -= 2.0 * tmp[k] * reflector(0, ind - column);
         }
     }
+    if (set_zero) {
+        for (size_t i = column + 1; i <= column_end; ++i) {
+            A(row, i) = 0.0;
+        }
+    }
 }
 }  // namespace details
 
@@ -128,30 +186,40 @@ Matrix<Type> right_segment_reflection(Matrix<Type>& A, int row, int column, int 
     s = details::column_abs_segment(A, row, column, column_end);
 
     Type alpha = Type(s);
-    if (abs(A(row, column)) > eps) {
-        alpha *= A(row, column) / abs(A(row, column));
-    }
 
-    if (s <= eps) {
+    if (std::abs(s) < eps) {
+        if (column < column_end) {
+            ans(0, 0) = 1;
+        } else {
+            ans(0, column_end - column) = 1;
+        }
         return ans;
     }
 
     long double coef = 0;
-
     if (column <= column_end) {
-        ans(0, 0) = A(row, column) - alpha;
+        long double d = -alpha * details::sign(A(row, column), 0);
+        ans(0, 0) = A(row, column) - d;
         for (size_t k = column + 1; k <= column_end; ++k) {
             ans(0, k - column) = A(row, k);
         }
+        assert(-2 * ans(0, 0) * d >= 0);
+        coef = std::sqrt(-2 * ans(0, 0) * d);
     } else {
-        ans(0, column - column_end) = A(row, column) - alpha;
+        long double d = -alpha * details::sign(A(row, column), 0);
+        ans(0, column - column_end) = A(row, column) - d;
         for (size_t k = column_end; k < column; ++k) {
             ans(0, k - column_end) = A(row, k);
         }
+        coef = std::sqrt(-2 * ans(0, column - column_end) * d);
     }
-    coef = details::row_abs_under(ans, 0, 0);
-
-    if (coef <= eps) {
+    if (coef < eps) {
+        ans = Matrix<Type>(1, std::abs(column_end - column) + 1);
+        if (column < column_end) {
+            ans(0, 0) = 1;
+        } else {
+            ans(0, column_end - column) = 1;
+        }
         return ans;
     }
     ans /= coef;
@@ -188,31 +256,42 @@ Matrix<Type> left_segment_reflection(Matrix<Type>& A, int row, int row_end, int 
     long double s = 0;
     s = details::row_abs_segment(A, row, row_end, column);
 
-    if (s <= eps) {
-        return ans;
-    }
-
     Type alpha = Type(s);
-    if (abs(A(row, column)) > eps) {
-        alpha *= A(row, column) / abs(A(row, column));
+
+    if (std::abs(s) < eps) {
+        if (row < row_end) {
+            ans(0, 0) = 1;
+        } else {
+            ans(0, row_end - row) = 1;
+        }
+        return ans;
     }
 
     long double coef = 0;
 
     if (row <= row_end) {
-        ans(0, 0) = A(row, column) - alpha;
+        long double d = -alpha * details::sign(A(row, column), eps);
+        ans(0, 0) = A(row, column) - d;
         for (size_t k = row + 1; k <= row_end; ++k) {
             ans(0, k - row) = A(k, column);
         }
+        assert(-2 * ans(0, 0) * d >= 0);
+        coef = std::sqrt(-2 * ans(0, 0) * d);
     } else {
-        ans(0, row - row_end) = A(row, column) - alpha;
+        long double d = -alpha * details::sign(A(row, column), eps);
+        ans(0, row - row_end) = A(row, column) - d;
         for (size_t k = row_end; k < row; ++k) {
             ans(0, k - row_end) = A(k, column);
         }
+        coef = std::sqrt(-2 * ans(0, row - row_end) * d);
     }
-    coef = details::row_abs_under(ans, 0, 0);
-
-    if (coef <= eps) {
+    if (coef < eps) {
+        ans = Matrix<Type>(1, std::abs(row_end - row) + 1);
+        if (row < row_end) {
+            ans(0, 0) = 1;
+        } else {
+            ans(0, row_end - row) = 1;
+        }
         return ans;
     }
     ans /= coef;

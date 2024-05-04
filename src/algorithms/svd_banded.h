@@ -15,16 +15,17 @@
 namespace convolution_svd {
 using namespace svd_computation;
 
-std::vector<long double> svd_banded(Matrix<long double> A, size_t band_width,
-                                    const long double eps = constants::DEFAULT_EPSILON) {
-    auto ans = apply_banded_qr(A, band_width, 0, 0, A.height() - 1, A.width() - 1, eps);
+inline std::vector<long double> svd_banded(Matrix<long double> A, size_t band_width,
+                                           const long double eps = constants::DEFAULT_EPSILON) {
+    std::vector<long double> ans = {};
+    apply_banded_qr(A, band_width, ans, 0, 0, A.height() - 1, A.width() - 1, eps);
     std::sort(ans.begin(), ans.end(), std::greater<long double>());
     return ans;
 }
 
-std::vector<long double> svd_banded_reduction(Matrix<long double> A, size_t band_width,
-                                              const long double eps = constants::DEFAULT_EPSILON) {
-    band_reduction(A, band_width, eps);
+inline std::vector<long double> svd_banded_reduction(Matrix<long double> A, size_t band_width,
+                                                     const long double eps = constants::DEFAULT_EPSILON) {
+    band_reduction(A, band_width, 1e-20);
     size_t min_size = std::min(A.height(), A.width());
     Matrix<long double> B(min_size, min_size);
     for (size_t i = 0; i < min_size; ++i) {
@@ -33,15 +34,10 @@ std::vector<long double> svd_banded_reduction(Matrix<long double> A, size_t band
             B(i, i + 1) = A(i, i + 1);
         }
     }
-    auto ans = apply_qr_for_bidiagonal(B, nullptr, nullptr, eps);
-    std::vector<long double> values;
-    for (size_t i = 0; i < std::min(A.height(), A.width()); ++i) {
-        if (std::abs(A(i, i)) >= eps) {
-            values.push_back(A(i, i));
-        }
-    }
-    std::sort(values.begin(), values.end());
-    return values;
+    std::vector<long double> ans = {};
+    apply_banded_qr(B, 2, ans, 0, 0, A.height() - 1, A.width() - 1, eps);
+    std::sort(ans.begin(), ans.end(), std::greater<long double>());
+    return ans;
 }
 
 }  // namespace convolution_svd

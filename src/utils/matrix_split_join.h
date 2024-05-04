@@ -42,8 +42,10 @@ Matrix<Type> join_matrix(const Matrix<Type>& up, const Matrix<Type>& down) {
     return result;
 }
 
-std::vector<long double> join_vector(const std::vector<long double>& v1, const std::vector<long double>& v2) {
+inline std::vector<long double> join_vector(const std::vector<long double>& v1, const std::vector<long double>& v2) {
+    std::cout << v1.size() << ' ' << v2.size() << std::endl;
     std::vector<long double> res(v1.size() + v2.size());
+    std::cout << res.size() << std::endl;
     for (size_t i = 0; i < v1.size(); ++i) {
         res[i] = v1[i];
     }

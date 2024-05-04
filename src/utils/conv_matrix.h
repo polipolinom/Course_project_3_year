@@ -4,20 +4,18 @@
 
 namespace convolution_svd {
 
-using namespace::svd_computation;
+using namespace ::svd_computation;
 
 namespace details {
-template<typename Type>
-void add_kernel_correlation(Matrix<Type>& conv, const Matrix<Type> kernel, 
-                            size_t kernel_ind_in, size_t kernel_ind_out,
-                            size_t C_in, size_t C_out, 
-                            size_t image_height, size_t image_width) {
+template <typename Type>
+void add_kernel_correlation(Matrix<Type>& conv, const Matrix<Type> kernel, size_t kernel_ind_in, size_t kernel_ind_out,
+                            size_t C_in, size_t C_out, size_t image_height, size_t image_width) {
     assert(kernel_ind_in >= 0 && kernel_ind_in < C_in);
     assert(kernel_ind_out >= 0 && kernel_ind_out < C_out);
     assert(image_height > 0);
     assert(image_width > 0);
-    assert(conv.height() == (image_height - kernel.height() + 1) * (image_width - kernel.width() + 1) * C_out);
-    assert(conv.width() == image_height * image_width * C_in);
+    assert(conv.height() >= (image_height - kernel.height() + 1) * (image_width - kernel.width() + 1) * C_out);
+    assert(conv.width() >= image_height * image_width * C_in);
 
     for (size_t j = 0; j < kernel.height(); ++j) {
         for (size_t i = 0; i < kernel.width(); ++i) {
@@ -32,15 +30,20 @@ void add_kernel_correlation(Matrix<Type>& conv, const Matrix<Type> kernel,
         }
     }
 }
-} 
+}  // namespace details
 
-
-template<typename Type>
-Matrix<Type> correlation_conv(const Matrix<Type>& kernel, size_t image_height, size_t image_width) {
+template <typename Type>
+Matrix<Type> correlation_conv(const Matrix<Type>& kernel, size_t image_height, size_t image_width,
+                              bool do_square = false) {
     assert(image_height > 0);
     assert(image_width > 0);
 
-    Matrix<Type> conv((image_height - kernel.height() + 1) * (image_width - kernel.width() + 1), image_height * image_width);
+    size_t N = (image_height - kernel.height() + 1) * (image_width - kernel.width() + 1);
+    size_t M = image_height * image_width;
+    if (do_square) {
+        N = M;
+    }
+    Matrix<Type> conv(N, M);
     for (size_t i = 0; i < kernel.width(); ++i) {
         for (size_t j = 0; j < image_width - kernel.width() + 1; ++j) {
             size_t row = j * (image_height - kernel.height() + 1);
@@ -49,15 +52,15 @@ Matrix<Type> correlation_conv(const Matrix<Type>& kernel, size_t image_height, s
                 for (size_t q = 0; q < kernel.height(); ++q) {
                     conv(row + p, column + p + q) = kernel(q, i);
                 }
-            } 
-
+            }
         }
     }
     return conv;
 }
 
-template<typename Type>
-Matrix<Type> correlation_conv(const std::vector<std::vector<Matrix<Type>>>& kernel, size_t image_height, size_t image_width) {
+template <typename Type>
+Matrix<Type> correlation_conv(const std::vector<std::vector<Matrix<Type>>>& kernel, size_t image_height,
+                              size_t image_width, bool do_square = false) {
     assert(image_height > 0);
     assert(image_width > 0);
 
@@ -71,7 +74,14 @@ Matrix<Type> correlation_conv(const std::vector<std::vector<Matrix<Type>>>& kern
     size_t kernel_width = kernel[0][0].width();
     assert(kernel_width > 0);
 
-    Matrix<Type> conv((image_height - kernel_height + 1) * (image_width - kernel_width + 1) * C_out, image_height * image_width * C_in);
+    size_t N = (image_height - kernel_height + 1) * (image_width - kernel_width + 1) * C_out;
+    size_t M = image_height * image_width * C_in;
+    if (do_square) {
+        auto mx = std::max(N, M);
+        N = mx;
+        M = mx;
+    }
+    Matrix<Type> conv(N, M);
 
     for (size_t i = 0; i < C_in; ++i) {
         assert(kernel[i].size() == C_out);
@@ -85,8 +95,9 @@ Matrix<Type> correlation_conv(const std::vector<std::vector<Matrix<Type>>>& kern
     return conv;
 }
 
-template<typename Type>
-Matrix<Type> correlation_conv(const std::initializer_list<std::initializer_list<Matrix<Type>>>& kernel, size_t image_height, size_t image_width) {
+template <typename Type>
+Matrix<Type> correlation_conv(const std::initializer_list<std::initializer_list<Matrix<Type>>>& kernel,
+                              size_t image_height, size_t image_width, bool do_square = false) {
     assert(image_height > 0);
     assert(image_width > 0);
 
@@ -100,17 +111,25 @@ Matrix<Type> correlation_conv(const std::initializer_list<std::initializer_list<
     size_t kernel_width = kernel.begin()[0].begin()[0].width();
     assert(kernel_width > 0);
 
-    Matrix<Type> conv((image_height - kernel_height + 1) * (image_width - kernel_width + 1) * C_out, image_height * image_width * C_in);
+    size_t N = (image_height - kernel_height + 1) * (image_width - kernel_width + 1) * C_out;
+    size_t M = image_height * image_width * C_in;
+    if (do_square) {
+        auto mx = std::max(N, M);
+        N = mx;
+        M = mx;
+    }
+    Matrix<Type> conv(N, M);
 
     for (size_t i = 0; i < C_in; ++i) {
         assert(kernel.begin()[i].size() == C_out);
         for (size_t j = 0; j < C_out; ++j) {
             assert(kernel.begin()[i].begin()[j].height() == kernel_height);
             assert(kernel.begin()[i].begin()[j].width() == kernel_width);
-            details::add_kernel_correlation(conv, kernel.begin()[i].begin()[j], i, j, C_in, C_out, image_height, image_width);
+            details::add_kernel_correlation(conv, kernel.begin()[i].begin()[j], i, j, C_in, C_out, image_height,
+                                            image_width);
         }
     }
 
     return conv;
 }
-}
+}  // namespace convolution_svd
