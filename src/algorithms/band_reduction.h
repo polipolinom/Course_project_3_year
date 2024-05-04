@@ -22,7 +22,8 @@ inline void reduct_element(Matrix<long double>& A, size_t i, size_t b,
                 break;
             }
             auto [cos, sin] = get_givens_rotation(A(ind, ind + b - 2), A(ind, ind + b - 1), eps);
-            for (size_t k = ind; k < std::min(ind + b + 1, A.height()); ++k) {
+            // multiply_right_givens(A, cos, sin, ind + b - 2, ind + b - 1);
+            for (size_t k = ind; k < std::min(ind + b, A.height()); ++k) {
                 long double x = A(k, ind + b - 2);
                 long double y = A(k, ind + b - 1);
 
@@ -31,6 +32,7 @@ inline void reduct_element(Matrix<long double>& A, size_t i, size_t b,
             }
         } else if (ind + b < A.width() && std::abs(A(ind, ind + b)) >= eps) {
             auto [cos, sin] = get_givens_rotation(A(ind, ind + b - 1), A(ind, ind + b), eps);
+            // multiply_right_givens(A, cos, sin, ind + b - 1, ind + b);
             for (size_t k = ind; k < std::min(ind + b + 1, A.height()); ++k) {
                 long double x = A(k, ind + b - 1);
                 long double y = A(k, ind + b);
@@ -40,7 +42,11 @@ inline void reduct_element(Matrix<long double>& A, size_t i, size_t b,
             }
         }
 
-        ind += b - 2;
+        if (ind == i) {
+            ind += b - 2;
+        } else {
+            ind += b - 1;
+        }
 
         if (ind + 1 >= A.height() || ind >= A.width()) {
             continue;
@@ -49,7 +55,8 @@ inline void reduct_element(Matrix<long double>& A, size_t i, size_t b,
             continue;
         }
         auto [cos, sin] = get_givens_rotation(A(ind, ind), A(ind + 1, ind), eps);
-        for (size_t k = ind; k < std::min(A.width(), ind + b + 1); ++k) {
+        // multiply_left_givens(A, cos, sin, ind, ind + 1);
+        for (size_t k = ind; k < std::min(A.width(), ind + b + 3); ++k) {
             long double x = A(ind, k);
             long double y = A(ind + 1, k);
 

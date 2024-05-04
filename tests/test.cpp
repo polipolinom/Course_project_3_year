@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     size_t kernel_height = 1;
     size_t kernel_width = 5;
     size_t image_height = 1;
-    size_t image_width = 10;
+    size_t image_width = 20;
     long double max_number = 1;
     std::vector<long double> epsilons = {1e-6, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16, 1e-18};
 

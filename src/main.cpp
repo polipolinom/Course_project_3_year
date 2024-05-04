@@ -17,9 +17,9 @@ int it;
 
 int main() {
     it = 0;
-    Matrix<long double> kernel1 = {{0.280448, -0.21724, 0.952077, 0.787701, -0.464125}};
+    Matrix<long double> kernel1 = {{-0.00620603, -0.227034, -0.409059, -0.302032, -0.635999}};
     size_t image_height = 1;
-    size_t image_width = 10;
+    size_t image_width = 20;
     auto A = correlation_conv({{kernel1}}, image_height, image_width, true);
     size_t band_size = 5;
     auto ans = svd_banded_reduction(A, band_size, 1e-16);

@@ -34,6 +34,13 @@ inline std::vector<long double> svd_banded_reduction(Matrix<long double> A, size
             B(i, i + 1) = A(i, i + 1);
         }
     }
+    // for (size_t i = 0; i < B.height(); ++i) {
+    //     std::cout << "[";
+    //     for (size_t j = 0; j < B.width(); ++j) {
+    //         std::cout << B(i, j) << ", ";
+    //     }
+    //     std::cout << "], \n";
+    // }
     std::vector<long double> ans = {};
     apply_banded_qr(B, 2, ans, 0, 0, A.height() - 1, A.width() - 1, eps);
     std::sort(ans.begin(), ans.end(), std::greater<long double>());
