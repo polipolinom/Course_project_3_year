@@ -48,6 +48,17 @@ bool is_zero(const Matrix<Type>& A, const long double eps = constants::DEFAULT_E
 }
 
 template <typename Type>
+bool check_zeros(const std::vector<Type>& v, size_t first, size_t last,
+                 const long double eps = constants::DEFAULT_EPSILON) {
+    for (size_t ind = first; ind < last; ++ind) {
+        if (std::abs(v[ind]) > eps) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename Type>
 bool is_unitary(const Matrix<Type>& A, const long double eps = constants::DEFAULT_EPSILON) {
     if (A.height() != A.width()) {
         return false;

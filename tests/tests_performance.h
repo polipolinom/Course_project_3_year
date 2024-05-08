@@ -31,7 +31,7 @@ std::vector<std::pair<std::pair<int, int>, int>> tests_performance_image(const s
         int total_time_reduction = 0;
         for (size_t i = 0; i < iterations_count; i++) {
             auto kernel = get_random_kernel(kernel_height, kernel_height, kernel_width, kernel_width, max_number);
-            auto A = correlation_conv(kernel, n, m);
+            auto A = correlation_conv(kernel, n, m, true);
             {
                 auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
                 compute_svd(A);
@@ -48,7 +48,7 @@ std::vector<std::pair<std::pair<int, int>, int>> tests_performance_image(const s
 
             {
                 auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                svd_banded_reduction(A, kernel_width);
+                svd_banded_reduction(A);
                 auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
                 total_time_reduction += finish - start;
             }

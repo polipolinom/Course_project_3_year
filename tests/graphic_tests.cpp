@@ -5,8 +5,8 @@
 #include "tests_performance.h"
 
 void performance_tests_image_size(size_t kernel_height, size_t kernel_width, long double max_number) {
-    std::vector<size_t> ns = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    std::vector<size_t> ms = {25, 50, 75, 100, 125, 150, 175, 200, 300, 400, 500};
+    std::vector<size_t> ns = {1, 1, 1, 1, 1, 1, 1, 1};
+    std::vector<size_t> ms = {25, 50, 75, 100, 125, 150, 175, 200};
 
     assert(ms.size() == ns.size());
 

@@ -21,9 +21,10 @@ using namespace svd_computation;
 
 inline void apply_banded_qr(Matrix<long double>&, size_t, std::vector<long double>&, size_t, size_t, size_t, size_t,
                             const long double);
+inline void apply_bidiagonal_qr(std::vector<long double>&, std::vector<long double>&, std::vector<long double>&, size_t,
+                                size_t, Matrix<long double>*, Matrix<long double>*, const long double);
 
 namespace details {
-
 inline long double sign(long double x) {
     if (x >= 0) {
         return 1;
@@ -118,23 +119,28 @@ inline bool split(Matrix<long double>& A, size_t band_size, std::vector<long dou
     return false;
 }
 
-inline bool delete_small_diags(Matrix<long double>& A, size_t band_size, std::vector<long double>& ans,
-                               size_t row_start, size_t column_start, size_t row_end, size_t column_end,
-                               long double eps_cmp, const long double eps = constants::DEFAULT_EPSILON) {
-    for (size_t ind = row_start; ind <= std::min(row_end, column_end - 1); ++ind) {
-        if (std::abs(A(ind, ind)) < eps_cmp) {
-            for (size_t k = ind + 1; k <= row_end; ++k) {
-                auto [cos, sin] = get_givens_rotation(A(k, k), A(ind, k), 1e-20);
-                for (size_t i = k; i <= std::min(column_end, k + band_size); ++i) {
-                    long double x = A(k, i);
-                    long double y = A(ind, i);
-
-                    A(k, i) = cos * x - sin * y;
-                    A(ind, i) = sin * x + cos * y;
+inline bool delete_small_diags(std::vector<long double>& diag, std::vector<long double>& subdiag,
+                               std::vector<long double>& ans, size_t ind_start, size_t ind_end,
+                               Matrix<long double>* left_basis = nullptr, Matrix<long double>* right_basis = nullptr,
+                               const long double eps_cmp = constants::DEFAULT_EPSILON,
+                               const long double eps = constants::DEFAULT_EPSILON) {
+    for (size_t ind = ind_start; ind + 1 < ind_end; ++ind) {
+        if (std::abs(diag[ind]) < eps_cmp) {
+            long double value = subdiag[ind];
+            subdiag[ind] = 0;
+            for (size_t k = ind + 1; k < ind_end; ++k) {
+                auto [cos, sin] = get_givens_rotation(diag[k], value, 1e-20);
+                if (left_basis) {
+                    multiply_right_givens(*left_basis, cos, sin, k, ind);
+                }
+                diag[k] = cos * diag[k] - sin * value;
+                if (k + 1 < ind_end) {
+                    value = sin * subdiag[k];
+                    subdiag[k] *= cos;
                 }
             }
-            apply_banded_qr(A, band_size, ans, row_start, column_start, ind, ind, eps);
-            apply_banded_qr(A, band_size, ans, ind + 1, ind + 1, row_end, column_end, eps);
+            apply_bidiagonal_qr(diag, subdiag, ans, ind_start, ind + 1, left_basis, right_basis, eps);
+            apply_bidiagonal_qr(diag, subdiag, ans, ind + 1, ind_end, left_basis, right_basis, eps);
             return true;
         }
     }
@@ -182,7 +188,122 @@ inline void reduce_first(Matrix<long double>& A, size_t band_size, std::vector<l
     }
     apply_banded_qr(A, band_size, ans, row_start + 1, column_start + 1, row_end, column_end, eps);
 }
+
+inline bool split(std::vector<long double>& diag, std::vector<long double>& subdiag, std::vector<long double>& ans,
+                  size_t ind_start, size_t ind_end, Matrix<long double>* left_basis = nullptr,
+                  Matrix<long double>* right_basis = nullptr, const long double eps_cmp = constants::DEFAULT_EPSILON,
+                  const long double eps = constants::DEFAULT_EPSILON) {
+    for (size_t ind = ind_start; ind + 1 < ind_end; ++ind) {
+        if (std::abs(subdiag[ind]) < eps_cmp) {
+            apply_bidiagonal_qr(diag, subdiag, ans, ind_start, ind + 1, left_basis, right_basis, eps);
+            apply_bidiagonal_qr(diag, subdiag, ans, ind + 1, ind_end, left_basis, right_basis, eps);
+            return true;
+        }
+    }
+    return false;
+}
+
+inline long double wilkinson_bidiag(std::vector<long double>& diag, std::vector<long double>& subdiag, size_t ind_start,
+                                    size_t ind_end, const long double eps = constants::DEFAULT_EPSILON) {
+    long double a1;
+    if (ind_end - ind_start >= 3) {
+        a1 = subdiag[ind_end - 3] * subdiag[ind_end - 3] + diag[ind_end - 2] * diag[ind_end - 2];
+    } else {
+        a1 = diag[ind_end - 2] * diag[ind_end - 2];
+    }
+    long double a2 = subdiag[ind_end - 2] * subdiag[ind_end - 2] + diag[ind_end - 1] * diag[ind_end - 1];
+    long double b = subdiag[ind_end - 2] * diag[ind_end - 2];
+    long double delta = (a1 - a2) / 2;
+    if (std::abs(delta) > eps) {
+        return a2 - details::sign(delta) * b * b / (std::abs(delta) + std::sqrt(delta * delta + b * b));
+    }
+    return a2 - std::abs(b);
+}
 }  // namespace details
+
+inline void apply_bidiagonal_qr(std::vector<long double>& diag, std::vector<long double>& subdiag,
+                                std::vector<long double>& ans, size_t ind_start, size_t ind_end,
+                                Matrix<long double>* left_basis = nullptr, Matrix<long double>* right_basis = nullptr,
+                                const long double eps = constants::DEFAULT_EPSILON) {
+    assert(diag.size() == subdiag.size() + 1);
+    if (ind_end <= ind_start) {
+        return;
+    }
+    if (ind_start + 1 == ind_end) {
+        ans.emplace_back(diag[ind_start]);
+        return;
+    }
+
+    size_t operations = 0;
+    long double new_eps = 1;
+    while (operations < constants::MAX_OPERATIONS_BIDIAG * (ind_end - ind_start)) {
+        new_eps = std::abs(diag[ind_end - 1]);
+        for (size_t ind = ind_start; ind + 1 < ind_end; ++ind) {
+            new_eps = std::max(new_eps, std::abs(diag[ind]) + std::abs(subdiag[ind]));
+        }
+        new_eps *= eps;
+        operations++;
+
+        if (details::check_zeros(subdiag, ind_start, ind_end - 1, new_eps)) {
+            break;
+        }
+
+        if (details::delete_small_diags(diag, subdiag, ans, ind_start, ind_end, left_basis, right_basis, new_eps,
+                                        eps)) {
+            return;
+        }
+
+        if (details::split(diag, subdiag, ans, ind_start, ind_end, left_basis, right_basis, new_eps, eps)) {
+            return;
+        }
+
+        long double shift = details::wilkinson_bidiag(diag, subdiag, ind_start, ind_end, eps);
+        long double value = 0;
+        for (size_t ind = ind_start; ind + 1 < ind_end; ++ind) {
+            if (ind == ind_start) {
+                // first rotation with shift to equals to QR algorithms
+                auto [cos, sin] = get_givens_rotation(diag[ind] * diag[ind] - shift, diag[ind] * subdiag[ind], 1e-20);
+                if (right_basis) {
+                    multiply_left_givens(*right_basis, cos, sin, ind, ind + 1);
+                }
+                long double a = diag[ind];
+                long double b = subdiag[ind];
+                diag[ind] = cos * a - sin * b;
+                subdiag[ind] = sin * a + cos * b;
+                value = -diag[ind + 1] * sin;
+                diag[ind + 1] *= cos;
+            } else {
+                auto [cos, sin] = get_givens_rotation(subdiag[ind - 1], value, 1e-20);
+                if (right_basis) {
+                    multiply_left_givens(*right_basis, cos, sin, ind, ind + 1);
+                }
+                subdiag[ind - 1] = cos * subdiag[ind - 1] - sin * value;
+                long double a = diag[ind];
+                long double b = subdiag[ind];
+                diag[ind] = cos * a - sin * b;
+                subdiag[ind] = sin * a + cos * b;
+                value = -diag[ind + 1] * sin;
+                diag[ind + 1] *= cos;
+            }
+            auto [cos, sin] = get_givens_rotation(diag[ind], value, eps);
+            if (left_basis) {
+                multiply_right_givens(*left_basis, cos, sin, ind, ind + 1);
+            }
+            diag[ind] = cos * diag[ind] - sin * value;
+            long double a = subdiag[ind];
+            long double b = diag[ind + 1];
+            subdiag[ind] = cos * a - sin * b;
+            diag[ind + 1] = sin * a + cos * b;
+            if (ind + 2 < ind_end) {
+                value = -subdiag[ind + 1] * sin;
+                subdiag[ind + 1] *= cos;
+            }
+        }
+    }
+    for (size_t ind = ind_start; ind < ind_end; ++ind) {
+        ans.emplace_back(diag[ind]);
+    }
+}
 
 inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vector<long double>& ans, size_t row_start,
                             size_t column_start, size_t row_end, size_t column_end,
@@ -201,7 +322,20 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
         return;
     }
 
-    if (band_size > 2 && band_size >= column_end - column_start || band_size >= row_end - row_start) {
+    if (band_size == 2) {
+        std::vector<long double> diags;
+        std::vector<long double> subdiags;
+        for (size_t ind = row_start; ind <= row_end; ++ind) {
+            diags.emplace_back(A(ind, ind));
+            if (ind + 1 <= column_end) {
+                subdiags.emplace_back(A(ind, ind + 1));
+            }
+        }
+        apply_bidiagonal_qr(diags, subdiags, ans, 0, diags.size(), nullptr, nullptr, eps);
+        return;
+    }
+
+    if (band_size >= column_end - column_start || band_size >= row_end - row_start) {
         Matrix<long double> small(row_end - row_start + 1, column_end - column_start + 1);
         for (size_t i = row_start; i <= row_end; ++i) {
             for (size_t j = column_start; j <= column_end; ++j) {
@@ -216,8 +350,9 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
     }
 
     size_t operations = 0;
-    while (operations < constants::MAX_OPERATIONS * A.height()) {
-        long double new_eps = 1;
+    long double new_eps = 1;
+    while (operations < constants::MAX_OPERATIONS * (row_end - row_start + 1)) {
+        new_eps = 1;
         for (size_t ind = row_start; ind <= row_end; ++ind) {
             long double sum = 0;
             for (size_t j = ind; j <= std::min(ind + band_size, column_end); ++j) {
@@ -234,8 +369,16 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
             break;
         }
 
-        if (band_size == 2 && details::delete_small_diags(A, band_size, ans, row_start, column_start, row_end,
-                                                          column_end, new_eps, eps)) {
+        if (band_size == 2) {
+            std::vector<long double> diags;
+            std::vector<long double> subdiags;
+            for (size_t ind = row_start; ind <= row_end; ++ind) {
+                diags.emplace_back(A(ind, ind));
+                if (ind + 1 <= column_end) {
+                    subdiags.emplace_back(A(ind, ind + 1));
+                }
+            }
+            apply_bidiagonal_qr(diags, subdiags, ans, 0, diags.size(), nullptr, nullptr, eps);
             return;
         }
 
@@ -268,13 +411,25 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
             }
         }
     }
-    for (size_t i = row_start; i <= std::min(row_end, column_end); ++i) {
-        if (std::abs(A(i, i)) < eps) {
-            ans.emplace_back(0);
-        } else {
-            ans.emplace_back(std::abs(A(i, i)));
+    if (details::is_diagonal_banded(A, band_size, row_start, column_start, row_end, column_end, new_eps)) {
+        for (size_t i = row_start; i <= std::min(row_end, column_end); ++i) {
+            if (std::abs(A(i, i)) < eps) {
+                ans.emplace_back(0);
+            } else {
+                ans.emplace_back(std::abs(A(i, i)));
+            }
         }
+        return;
     }
-    return;
+    if (std::abs(A(row_start, column_start)) < eps) {
+        ans.emplace_back(0);
+    } else {
+        ans.emplace_back(std::abs(A(row_start, column_start)));
+    }
+    long double mn = 1;
+    for (size_t ind = row_start + 1; ind < row_start + band_size; ++ind) {
+        mn = std::min(mn, std::abs(A(row_start, ind)));
+    }
+    apply_banded_qr(A, band_size, ans, row_start + 1, column_start + 1, row_end, column_end, std::max(mn, eps));
 }
 }  // namespace convolution_svd

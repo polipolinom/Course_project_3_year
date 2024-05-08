@@ -173,19 +173,35 @@ inline void mult_right_reflection_banded(Matrix<long double>& A, size_t band_siz
 }
 }  // namespace details
 
-template <typename Type>
-Matrix<Type> right_segment_reflection(Matrix<Type>& A, int row, int column, int column_end, bool change_matrix = true,
-                                      const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+inline void mult_right_segment_reflection(Matrix<long double>& A, Matrix<long double>& reflection, int column,
+                                          int column_end) {
+    if (column_end < column) {
+        std::swap(column, column_end);
+    }
+    Vector<long double> tmp(A.height());
+    for (size_t ind = 0; ind < tmp.size(); ++ind) {
+        for (size_t j = column; j <= column_end; ++j) {
+            tmp[ind] += A(ind, j) * reflection(0, j - column);
+        }
+    }
+
+    for (size_t k = 0; k < A.height(); ++k) {
+        for (size_t ind = column; ind <= column_end; ++ind) {
+            A(k, ind) -= 2.0 * tmp[k] * reflection(0, ind - column);
+        }
+    }
+}
+
+inline Matrix<long double> right_segment_reflection(
+    Matrix<long double>& A, int row, int column, int column_end, bool change_matrix = true,
+    const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     assert(row >= 0 && row < A.height());
     assert(column >= 0 && column < A.width());
     assert((column_end >= column && column_end < A.width()) || (column_end <= column && column_end >= 0));
 
-    Matrix<Type> ans(1, std::abs(column_end - column) + 1);
+    Matrix<long double> ans(1, std::abs(column_end - column) + 1);
 
-    long double s = 0;
-    s = details::column_abs_segment(A, row, column, column_end);
-
-    Type alpha = Type(s);
+    long double s = details::column_abs_segment(A, row, column, column_end);
 
     if (std::abs(s) < eps) {
         if (column < column_end) {
@@ -198,7 +214,7 @@ Matrix<Type> right_segment_reflection(Matrix<Type>& A, int row, int column, int 
 
     long double coef = 0;
     if (column <= column_end) {
-        long double d = -alpha * details::sign(A(row, column), 0);
+        long double d = -s * details::sign(A(row, column), 0);
         ans(0, 0) = A(row, column) - d;
         for (size_t k = column + 1; k <= column_end; ++k) {
             ans(0, k - column) = A(row, k);
@@ -206,7 +222,7 @@ Matrix<Type> right_segment_reflection(Matrix<Type>& A, int row, int column, int 
         assert(-2 * ans(0, 0) * d >= 0);
         coef = std::sqrt(-2 * ans(0, 0) * d);
     } else {
-        long double d = -alpha * details::sign(A(row, column), 0);
+        long double d = -s * details::sign(A(row, column), 0);
         ans(0, column - column_end) = A(row, column) - d;
         for (size_t k = column_end; k < column; ++k) {
             ans(0, k - column_end) = A(row, k);
@@ -214,7 +230,7 @@ Matrix<Type> right_segment_reflection(Matrix<Type>& A, int row, int column, int 
         coef = std::sqrt(-2 * ans(0, column - column_end) * d);
     }
     if (coef < eps) {
-        ans = Matrix<Type>(1, std::abs(column_end - column) + 1);
+        ans = Matrix<long double>(1, std::abs(column_end - column) + 1);
         if (column < column_end) {
             ans(0, 0) = 1;
         } else {
@@ -224,39 +240,41 @@ Matrix<Type> right_segment_reflection(Matrix<Type>& A, int row, int column, int 
     }
     ans /= coef;
 
-    if (column_end < column) {
-        std::swap(column, column_end);
-    }
     if (change_matrix) {
-        Vector<Type> tmp(A.height());
-        for (size_t ind = 0; ind < tmp.size(); ++ind) {
-            for (size_t j = column; j <= column_end; ++j) {
-                tmp[ind] += A(ind, j) * ans(0, j - column);
-            }
-        }
-
-        for (size_t k = 0; k < A.height(); ++k) {
-            for (size_t ind = column; ind <= column_end; ++ind) {
-                A(k, ind) -= Type(2.0) * tmp[k] * ans(0, ind - column);
-            }
-        }
+        mult_right_segment_reflection(A, ans, column, column_end);
     }
     return ans;
 }
 
-template <typename Type>
-Matrix<Type> left_segment_reflection(Matrix<Type>& A, int row, int row_end, int column, bool change_matrix = true,
-                                     const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+inline void mult_left_segment_reflection(Matrix<long double>& A, Matrix<long double>& reflection, int row,
+                                         int row_end) {
+    if (row_end < row) {
+        std::swap(row, row_end);
+    }
+    Vector<long double> tmp(A.width());
+    for (size_t ind = 0; ind < tmp.size(); ++ind) {
+        for (size_t j = row; j <= row_end; ++j) {
+            tmp[ind] += A(j, ind) * reflection(0, j - row);
+        }
+    }
+
+    for (size_t k = 0; k < A.width(); ++k) {
+        for (size_t ind = row; ind <= row_end; ++ind) {
+            A(ind, k) -= 2.0 * tmp[k] * reflection(0, ind - row);
+        }
+    }
+}
+
+inline Matrix<long double> left_segment_reflection(
+    Matrix<long double>& A, int row, int row_end, int column, bool change_matrix = true,
+    const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
     assert(row >= 0 && row < A.height());
     assert(column >= 0 && column < A.width());
     assert((row_end >= row && row_end < A.height()) || (row_end <= row && row_end >= 0));
 
-    Matrix<Type> ans(1, std::abs(row_end - row) + 1);
+    Matrix<long double> ans(1, std::abs(row_end - row) + 1);
 
-    long double s = 0;
-    s = details::row_abs_segment(A, row, row_end, column);
-
-    Type alpha = Type(s);
+    long double s = details::row_abs_segment(A, row, row_end, column);
 
     if (std::abs(s) < eps) {
         if (row < row_end) {
@@ -270,7 +288,7 @@ Matrix<Type> left_segment_reflection(Matrix<Type>& A, int row, int row_end, int 
     long double coef = 0;
 
     if (row <= row_end) {
-        long double d = -alpha * details::sign(A(row, column), eps);
+        long double d = -s * details::sign(A(row, column), eps);
         ans(0, 0) = A(row, column) - d;
         for (size_t k = row + 1; k <= row_end; ++k) {
             ans(0, k - row) = A(k, column);
@@ -278,7 +296,7 @@ Matrix<Type> left_segment_reflection(Matrix<Type>& A, int row, int row_end, int 
         assert(-2 * ans(0, 0) * d >= 0);
         coef = std::sqrt(-2 * ans(0, 0) * d);
     } else {
-        long double d = -alpha * details::sign(A(row, column), eps);
+        long double d = -s * details::sign(A(row, column), eps);
         ans(0, row - row_end) = A(row, column) - d;
         for (size_t k = row_end; k < row; ++k) {
             ans(0, k - row_end) = A(k, column);
@@ -286,7 +304,7 @@ Matrix<Type> left_segment_reflection(Matrix<Type>& A, int row, int row_end, int 
         coef = std::sqrt(-2 * ans(0, row - row_end) * d);
     }
     if (coef < eps) {
-        ans = Matrix<Type>(1, std::abs(row_end - row) + 1);
+        ans = Matrix<long double>(1, std::abs(row_end - row) + 1);
         if (row < row_end) {
             ans(0, 0) = 1;
         } else {
@@ -296,22 +314,8 @@ Matrix<Type> left_segment_reflection(Matrix<Type>& A, int row, int row_end, int 
     }
     ans /= coef;
 
-    if (row_end < row) {
-        std::swap(row, row_end);
-    }
     if (change_matrix) {
-        Vector<Type> tmp(A.width());
-        for (size_t ind = 0; ind < tmp.size(); ++ind) {
-            for (size_t j = row; j <= row_end; ++j) {
-                tmp[ind] += A(j, ind) * ans(0, j - row);
-            }
-        }
-
-        for (size_t k = 0; k < A.width(); ++k) {
-            for (size_t ind = row; ind <= row_end; ++ind) {
-                A(ind, k) -= Type(2.0) * tmp[k] * ans(0, ind - row);
-            }
-        }
+        mult_left_segment_reflection(A, ans, row, row_end);
     }
     return ans;
 }

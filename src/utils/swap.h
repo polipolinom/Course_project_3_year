@@ -5,10 +5,10 @@
 namespace convolution_svd {
 namespace details {
 
-using namespace::svd_computation;
-  
-template<typename Type>
-void swap_rows(Matrix<Type>& A, size_t ind1, size_t ind2, Matrix<Type>* left_basis = nullptr) {
+using namespace ::svd_computation;
+
+template <typename Type>
+void swap_rows_basis(Matrix<Type>& A, size_t ind1, size_t ind2, Matrix<Type>* left_basis = nullptr) {
     assert(0 <= ind1 < A.height());
     assert(0 <= ind2 < A.height());
 
@@ -27,8 +27,8 @@ void swap_rows(Matrix<Type>& A, size_t ind1, size_t ind2, Matrix<Type>* left_bas
     return;
 }
 
-template<typename Type>
-void swap_columns(Matrix<Type>& A, size_t ind1, size_t ind2, Matrix<Type>* right_basis = nullptr) {
+template <typename Type>
+void swap_columns_basis(Matrix<Type>& A, size_t ind1, size_t ind2, Matrix<Type>* right_basis = nullptr) {
     assert(0 <= ind1 < A.width());
     assert(0 <= ind2 < A.width());
 
@@ -46,5 +46,21 @@ void swap_columns(Matrix<Type>& A, size_t ind1, size_t ind2, Matrix<Type>* right
 
     return;
 }
+
+inline void swap_columns(Matrix<long double>& A, int ind1, int ind2) {
+    assert(ind1 >= 0 && ind1 < A.width());
+    assert(ind2 >= 0 && ind2 < A.width());
+    for (int i = 0; i < A.height(); ++i) {
+        std::swap(A(i, ind1), A(i, ind2));
+    }
 }
+
+inline void swap_rows(Matrix<long double>& A, int ind1, int ind2) {
+    assert(ind1 >= 0 && ind1 < A.height());
+    assert(ind2 >= 0 && ind2 < A.height());
+    for (int i = 0; i < A.width(); ++i) {
+        std::swap(A(ind1, i), A(ind2, i));
+    }
 }
+}  // namespace details
+}  // namespace convolution_svd

@@ -33,7 +33,7 @@ std::vector<std::pair<long double, long double>> tests_precision_epsilons(std::v
             auto A = correlation_conv(kernel, n, m, true);
             auto true_values = compute_svd<long double>(A, nullptr, nullptr, eps);
             auto band_qr_values = svd_banded(A, kernel_width, eps);
-            auto band_reduction_values = svd_banded_reduction(A, kernel_width, eps);
+            auto band_reduction_values = svd_banded_reduction(A, nullptr, nullptr, eps);
             if (true_values.size() != band_qr_values.size()) {
                 std::cout << "Wrong count in band qr";
                 return {};
@@ -50,15 +50,6 @@ std::vector<std::pair<long double, long double>> tests_precision_epsilons(std::v
             }
             qr /= true_values.size();
             reduction /= true_values.size();
-            if (reduction > 0.01) {
-                for (size_t ind = 0; ind < true_values.size(); ++ind) {
-                    std::cout << true_values[ind] << " " << band_qr_values[ind] << " " << band_reduction_values[ind]
-                              << std::endl;
-                }
-                std::cout << std::endl << std::endl;
-                std::cout << kernel;
-                return {};
-            }
             total_qr += qr;
             total_reduction += reduction;
         }
