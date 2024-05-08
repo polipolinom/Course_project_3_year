@@ -111,6 +111,33 @@ std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long 
 
         return svd_banded_reduction(upper_band, left_basis, right_basis, eps);
     }
-    return {};
+
+    size_t up_band_size = C_in * kernel_size;
+    size_t down_band_size = C_out * (signal_size - kernel_size + 1) - C_in * (signal_size - kernel_size) - 1;
+    Matrix<long double> A(C_out * (signal_size - kernel_size + 1), up_band_size + down_band_size);
+    for (size_t i = 0; i < signal_size - kernel_size + 1; ++i) {
+        for (size_t j = 0; j < kernel_size; ++j) {
+            for (size_t c_in = 0; c_in < C_in; ++c_in) {
+                for (size_t c_out = 0; c_out < C_out; ++c_out) {
+                    size_t row = i * C_out + c_out;
+                    size_t column = (j + i) * C_in + c_in;
+                    if (column >= row) {
+                        A(row, column - row + down_band_size) = kernels[c_in][c_out](0, j);
+                    } else {
+                        A(row, down_band_size - (row - column)) = kernels[c_in][c_out](0, j);
+                    }
+                }
+            }
+        }
+    }
+
+    band_down_diag_reduction(A, down_band_size, up_band_size, left_basis, right_basis, eps);
+    Matrix<long double> upper_band(std::min(A.height(), C_in * signal_size), up_band_size);
+    for (size_t i = 0; i < upper_band.height(); ++i) {
+        for (size_t j = 0; j < up_band_size; ++j) {
+            upper_band(i, j) = A(i, j + down_band_size);
+        }
+    }
+    return svd_banded_reduction(upper_band, left_basis, right_basis, eps);
 }
 }  // namespace convolution_svd

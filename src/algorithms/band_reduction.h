@@ -23,7 +23,7 @@ inline void diag_reduct_element(Matrix<long double>& A, size_t i, size_t b, Matr
     long double value = 0;
     while (ind_row < A.height()) {
         if (ind_row == i) {
-            auto [cos, sin] = get_givens_rotation(A(ind_row, b - 1), A(ind_row, b), eps);
+            auto [cos, sin] = get_givens_rotation(A(ind_row, b - 1), A(ind_row, b), 1e-20);
             if (right_basis) {
                 multiply_left_givens(*right_basis, cos, sin, ind_row + b - 1, ind_row + b);
             }
@@ -41,7 +41,7 @@ inline void diag_reduct_element(Matrix<long double>& A, size_t i, size_t b, Matr
                 break;
             }
         } else if (std::abs(value) >= eps) {
-            auto [cos, sin] = get_givens_rotation(A(ind_row, b), value, eps);
+            auto [cos, sin] = get_givens_rotation(A(ind_row, b), value, 1e-20);
             if (right_basis) {
                 multiply_left_givens(*right_basis, cos, sin, ind_row + b, ind_row + b + 1);
             }
@@ -74,7 +74,7 @@ inline void diag_reduct_element(Matrix<long double>& A, size_t i, size_t b, Matr
             break;
         }
 
-        auto [cos, sin] = get_givens_rotation(A(ind_row, 0), value, eps);
+        auto [cos, sin] = get_givens_rotation(A(ind_row, 0), value, 1e-20);
         if (left_basis) {
             multiply_right_givens(*left_basis, cos, sin, ind_row, ind_row + 1);
         }
@@ -92,6 +92,76 @@ inline void diag_reduct_element(Matrix<long double>& A, size_t i, size_t b, Matr
         A(ind_row + 1, b) *= cos;
     }
 }
+
+inline void down_diag_reduct_element(Matrix<long double>& A, const size_t i, const size_t b, const size_t up_band_size,
+                                     Matrix<long double>* left_basis, Matrix<long double>* right_basis,
+                                     const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+    if (std::abs(A(i, b)) < eps) {
+        return;
+    }
+    size_t ind_row = i;
+    long double value = 0;
+    while (ind_row < A.height()) {
+        if (ind_row == i) {
+            auto [cos, sin] = get_givens_rotation(A(i - 1, b + 1), A(i, b), 1e-20);
+            if (left_basis) {
+                multiply_right_givens(*left_basis, cos, sin, i - 1, i);
+            }
+            for (size_t j = b + 1; j < A.width(); ++j) {
+                long double x = A(i - 1, j);
+                long double y = A(i, j - 1);
+
+                A(i - 1, j) = cos * x - sin * y;
+                A(i, j - 1) = sin * x + cos * y;
+            }
+            value = -A(i, A.width() - 1) * sin;
+            A(i, A.width() - 1) *= cos;
+        } else {
+            if (std::abs(value) < eps) {
+                break;
+            }
+            auto [cos, sin] = get_givens_rotation(A(ind_row - 1, b), value, 1e-20);
+            if (left_basis) {
+                multiply_right_givens(*left_basis, cos, sin, ind_row - 1, ind_row);
+            }
+            A(ind_row - 1, b) = cos * A(ind_row - 1, b) - sin * value;
+            for (size_t j = b + 1; j < A.width(); ++j) {
+                long double x = A(ind_row - 1, j);
+                long double y = A(ind_row, j - 1);
+
+                A(ind_row - 1, j) = cos * x - sin * y;
+                A(ind_row, j - 1) = sin * x + cos * y;
+            }
+            value = -A(ind_row, A.width() - 1) * sin;
+            A(ind_row, A.width() - 1) *= cos;
+        }
+        if (std::abs(value) < eps) {
+            break;
+        }
+        auto [cos, sin] = get_givens_rotation(A(ind_row - 1, A.width() - 1), value);
+        if (right_basis) {
+            multiply_left_givens(*right_basis, cos, sin, ind_row - 1 + up_band_size - 1, ind_row - 1 + up_band_size);
+        }
+        A(ind_row - 1, A.width() - 1) = cos * A(ind_row - 1, A.width() - 1) - sin * value;
+        for (size_t j = A.width() - 1; j > b; --j) {
+            if (ind_row + A.width() - j - 1 >= A.height()) {
+                break;
+            }
+            long double x = A(ind_row + (A.width() - j) - 1, j - 1);
+            long double y = A(ind_row + (A.width() - j) - 1, j);
+
+            A(ind_row + (A.width() - j) - 1, j - 1) = cos * x - sin * y;
+            A(ind_row + (A.width() - j) - 1, j) = sin * x + cos * y;
+        }
+        if (ind_row + A.width() - b - 1 >= A.height()) {
+            break;
+        }
+        value = -A(ind_row + (A.width() - b) - 1, b) * sin;
+        A(ind_row + (A.width() - b) - 1, b) *= cos;
+
+        ind_row += A.width() - b - 1;
+    }
+}
 }  // namespace details
 
 inline void band_diag_reduction(Matrix<long double>& A, Matrix<long double>* left_basis = nullptr,
@@ -104,38 +174,18 @@ inline void band_diag_reduction(Matrix<long double>& A, Matrix<long double>* lef
     }
 }
 
-// inline void block_band_upper(Matrix<long double>& A, size_t band_width, size_t block_height, size_t block_width,
-//                              const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
-//     // band_width is number blocks in band
-//     assert(band_width >= 0 && band_width * block_width <= A.width());
-//     assert(A.height() % block_height == 0 && A.width() % block_width == 0);
-//     if (block_height <= block_width) {
-//         if (block_height == 1) {
-//             return band_diag_reduction(A, A.width() - A.height() + 1);
-//         }
-//         for (size_t i = 0; i < A.height() / block_height; ++i) {
-//             size_t row = block_height * i;
-//             size_t column = block_width * i;
-//             for (size_t ind = 0; ind < block_height; ++ind) {
-//                 auto v = left_segment_reflection(A, row + ind, row + block_height - 1, column + ind, false, eps);
-//                 details::mult_left_reflection_banded(A, band_width * block_width, v, row + ind, row + block_height -
-//                 1,
-//                                                      column + ind, false, eps);
-//             }
-//         }
-//     } else if (block_height >= block_width * band_width) {
-//         for (size_t i = 0; i < A.height() / block_height; ++i) {
-//             size_t row = block_height * i;
-//             size_t column = block_width * i;
-//             for (size_t ind = 0; ind < block_width * band_width; ++ind) {
-//                 auto v = left_segment_reflection(A, row + ind, row, column + ind, false, eps);
-//                 details::mult_left_reflection_banded(A, band_width * block_width, v, row, row + ind, column + ind,
-//                                                      false, eps);
-//             }
-//         }
-//         A.transpose();
-//     } else {
-//     }
-// }
+inline void band_down_diag_reduction(Matrix<long double>& A, const size_t down_band_size, const size_t up_band_size,
+                                     Matrix<long double>* left_basis = nullptr,
+                                     Matrix<long double>* right_basis = nullptr,
+                                     const long double eps = convolution_svd::constants::DEFAULT_EPSILON) {
+    assert(A.width() == up_band_size + down_band_size);
+    assert(up_band_size >= 2);
+
+    for (size_t b = 0; b < down_band_size; ++b) {
+        for (size_t i = down_band_size - b; i < A.height(); ++i) {
+            details::down_diag_reduct_element(A, i, b, up_band_size, left_basis, right_basis, eps);
+        }
+    }
+}
 
 }  // namespace convolution_svd
