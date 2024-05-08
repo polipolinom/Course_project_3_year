@@ -4,6 +4,7 @@
 
 #include "../course-project-second-year/algorithms/householder_reflections.h"
 #include "../course-project-second-year/types/matrix.h"
+#include "algorithms/regularization.h"
 #include "algorithms/svd_convolution.h"
 
 using namespace convolution_svd;
@@ -17,11 +18,11 @@ int main() {
     Matrix<long double> kernel2 = {{3, 4, 5}};
     Matrix<long double> kernel3 = {{5, 6, 7}};
     Matrix<long double> kernel4 = {{7, 8, 9}};
-    Matrix<long double> left_basis;
-    Matrix<long double> right_basis;
-    auto ans = svd_convolution_1d({{kernel1}, {kernel2}}, 5, &left_basis, &right_basis, true);
-    for (auto i : ans) {
-        std::cout << i << " ";
+    auto kernels = clip_singular_1d({{kernel1, kernel3}, {kernel2, kernel4}}, 5, 0, 100);
+    for (auto i : kernels) {
+        for (auto j : i) {
+            std::cout << j << std::endl;
+        }
     }
     return 0;
 }
