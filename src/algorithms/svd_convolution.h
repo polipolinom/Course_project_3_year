@@ -12,7 +12,8 @@ namespace convolution_svd {
 using namespace svd_computation;
 std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long double>>> kernels,
                                             const size_t signal_size, Matrix<long double>* left_basis = nullptr,
-                                            Matrix<long double>* right_basis = nullptr, bool full_basis = false,
+                                            Matrix<long double>* right_basis = nullptr, const size_t stride = 1,
+                                            bool full_basis = false,
                                             const long double eps = constants::DEFAULT_EPSILON) {
     assert(signal_size > 0);
     size_t C_in = kernels.size();
@@ -45,16 +46,29 @@ std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long 
     if (C_in == 1 && C_out == 1) {
         auto kernel = kernels[0][0];
         Matrix<long double> A(signal_size - kernel_size + 1, kernel_size);
-        for (size_t i = 0; i < A.height(); ++i) {
+        for (size_t i = 0; i < A.height(); i += stride) {
             for (size_t j = 0; j < A.width(); ++j) {
-                A(i, j) = kernel(0, j);
+                A(i, j + i) = kernel(0, j);
             }
         }
-        return svd_banded_reduction(A, left_basis, right_basis, eps);
+        auto values = svd_banded_reduction(A, left_basis, right_basis, eps);
+        if (left_basis) {
+            Matrix<long double> new_left_basis(left_basis->height(), (signal_size - kernel_size + stride) / stride);
+            for (size_t i = 0; i < new_left_basis.height(); ++i) {
+                for (size_t j = 0; j < new_left_basis.width(); ++j) {
+                    new_left_basis(i, j) = (*left_basis)(i, j);
+                }
+            }
+            *left_basis = new_left_basis;
+        }
+        while (values.size() > (signal_size - kernel_size + stride) / stride) {
+            values.pop_back();
+        }
+        return values;
     }
     if (C_out <= C_in) {
         Matrix<long double> A(C_out * (signal_size - kernel_size + 1), C_in * kernel_size);
-        for (size_t i = 0; i < signal_size - kernel_size + 1; ++i) {
+        for (size_t i = 0; i < signal_size - kernel_size + 1; i += stride) {
             for (size_t j = 0; j < kernel_size; ++j) {
                 for (size_t c_in = 0; c_in < C_in; ++c_in) {
                     for (size_t c_out = 0; c_out < C_out; ++c_out) {
@@ -64,7 +78,7 @@ std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long 
             }
         }
 
-        for (size_t i = 0; i < signal_size - kernel_size + 1; ++i) {
+        for (size_t i = 0; i < signal_size - kernel_size + 1; i += stride) {
             for (size_t j = 0; j < C_out - 1; ++j) {
                 auto v = left_segment_reflection(A, C_out * i + j, C_out * (i + 1) - 1, j, true, 1e-20);
                 if (left_basis) {
@@ -109,13 +123,27 @@ std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long 
             }
         }
 
-        return svd_banded_reduction(upper_band, left_basis, right_basis, eps);
+        auto values = svd_banded_reduction(upper_band, left_basis, right_basis, eps);
+        if (left_basis) {
+            Matrix<long double> new_left_basis(left_basis->height(),
+                                               C_out * ((signal_size - kernel_size + stride) / stride));
+            for (size_t i = 0; i < new_left_basis.height(); ++i) {
+                for (size_t j = 0; j < new_left_basis.width(); ++j) {
+                    new_left_basis(i, j) = (*left_basis)(i, j);
+                }
+            }
+            *left_basis = new_left_basis;
+        }
+        while (values.size() > C_out * ((signal_size - kernel_size + stride) / stride)) {
+            values.pop_back();
+        }
+        return values;
     }
 
     size_t up_band_size = C_in * kernel_size;
     size_t down_band_size = C_out * (signal_size - kernel_size + 1) - C_in * (signal_size - kernel_size) - 1;
     Matrix<long double> A(C_out * (signal_size - kernel_size + 1), up_band_size + down_band_size);
-    for (size_t i = 0; i < signal_size - kernel_size + 1; ++i) {
+    for (size_t i = 0; i < signal_size - kernel_size + 1; i += stride) {
         for (size_t j = 0; j < kernel_size; ++j) {
             for (size_t c_in = 0; c_in < C_in; ++c_in) {
                 for (size_t c_out = 0; c_out < C_out; ++c_out) {
@@ -138,6 +166,20 @@ std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long 
             upper_band(i, j) = A(i, j + down_band_size);
         }
     }
-    return svd_banded_reduction(upper_band, left_basis, right_basis, eps);
+    auto values = svd_banded_reduction(upper_band, left_basis, right_basis, eps);
+    if (left_basis) {
+        Matrix<long double> new_left_basis(left_basis->height(),
+                                           C_out * ((signal_size - kernel_size + stride) / stride));
+        for (size_t i = 0; i < new_left_basis.height(); ++i) {
+            for (size_t j = 0; j < new_left_basis.width(); ++j) {
+                new_left_basis(i, j) = (*left_basis)(i, j);
+            }
+        }
+        *left_basis = new_left_basis;
+    }
+    while (values.size() > C_out * ((signal_size - kernel_size + stride) / stride)) {
+        values.pop_back();
+    }
+    return values;
 }
 }  // namespace convolution_svd

@@ -21,7 +21,9 @@ int main() {
     Matrix<long double> kernel2 = {{3, 4, 5}};
     Matrix<long double> kernel3 = {{5, 6, 7}};
     Matrix<long double> kernel4 = {{7, 8, 9}};
-    auto kernels = svd_convolution_1d({{kernel1, kernel3, kernel2}}, 5);
+    Matrix<long double> left_basis;
+    Matrix<long double> right_basis;
+    auto values = svd_convolution_1d({{kernel1, kernel3, kernel2}}, 5, &left_basis, &right_basis, 2);
     Matrix<long double> A = correlation_conv({{kernel1, kernel3, kernel2}}, 1, 5);
     for (size_t i = 0; i < A.height(); ++i) {
         std::cout << "[";
@@ -30,7 +32,7 @@ int main() {
         }
         std::cout << "],\n";
     }
-    for (auto i : kernels) {
+    for (auto i : values) {
         std::cout << i << " ";
     }
     return 0;
