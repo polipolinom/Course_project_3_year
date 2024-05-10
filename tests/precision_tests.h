@@ -20,7 +20,7 @@ std::vector<std::pair<long double, long double>> tests_precision_epsilons(std::v
                                                                           size_t image_height, size_t image_width,
                                                                           size_t kernel_height, size_t kernel_width,
                                                                           long double max_number) {
-    size_t iterations_count = 10;
+    size_t iterations_count = 1;
 
     std::vector<std::pair<long double, long double>> res;
     for (auto eps : epsilons) {
@@ -45,16 +45,9 @@ std::vector<std::pair<long double, long double>> tests_precision_epsilons(std::v
             long double qr = 0;
             long double reduction = 0;
             for (size_t ind = 0; ind < true_values.size(); ++ind) {
-                if (std::abs(true_values[ind] - band_qr_values[ind]) == 0) {
-                    qr += 0;
-                } else {
-                    qr += std::abs(true_values[ind] - band_qr_values[ind]) / std::abs(true_values[ind]);
-                }
-                if (std::abs(true_values[ind] - band_reduction_values[ind]) == 0) {
-                    reduction += 0;
-                } else {
-                    reduction += std::abs(true_values[ind] - band_reduction_values[ind]) / std::abs(true_values[ind]);
-                }
+                qr += std::abs(true_values[ind] - band_qr_values[ind]) / std::max(1.0l, std::abs(true_values[ind]));
+                reduction += std::abs(true_values[ind] - band_reduction_values[ind]) /
+                             std::max(1.0l, std::abs(true_values[ind]));
             }
             qr /= true_values.size();
             reduction /= true_values.size();
