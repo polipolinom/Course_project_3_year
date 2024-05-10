@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
     */
     it = 0;
     size_t kernel_height = 1;
-    size_t kernel_width = 20;
+    size_t kernel_width = 5;
     // performance_tests_image_size(kernel_height, kernel_width, 1.0);
     size_t image_height = 1;
     size_t image_width = 50;

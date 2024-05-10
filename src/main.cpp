@@ -23,7 +23,7 @@ int main() {
     Matrix<long double> kernel4 = {{7, 8, 9}};
     Matrix<long double> left_basis;
     Matrix<long double> right_basis;
-    auto values = svd_convolution_1d({{kernel1, kernel3, kernel2}}, 5, &left_basis, &right_basis, 2);
+    auto values = svd_convolution_1d({{kernel1, kernel3, kernel2}}, 5, &left_basis, &right_basis, 1);
     Matrix<long double> A = correlation_conv({{kernel1, kernel3, kernel2}}, 1, 5);
     for (size_t i = 0; i < A.height(); ++i) {
         std::cout << "[";

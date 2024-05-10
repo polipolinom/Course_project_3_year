@@ -351,14 +351,20 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
 
     size_t operations = 0;
     long double new_eps = 1;
-    while (operations < constants::MAX_OPERATIONS * (row_end - row_start + 1)) {
+    long double r = 0;
+    bool use_shift = false;
+    while (it < constants::MAX_OPERATIONS) {
         new_eps = 1;
+        long double new_r = 0;
         for (size_t ind = row_start; ind <= row_end; ++ind) {
             long double sum = 0;
             for (size_t j = ind; j <= std::min(ind + band_size, column_end); ++j) {
                 sum += std::abs(A(ind, j));
             }
             new_eps = std::max(new_eps, sum);
+            if (ind + band_size - 1 <= column_end) {
+                new_r += std::abs(A(ind, ind + band_size - 1));
+            }
         }
         new_eps *= eps;
         operations++;
@@ -391,7 +397,20 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
             return;
         }
 
-        auto first = details::shift_riley2(A, band_size, row_start, column_start, row_end, column_end);
+        if (new_r < r / 4.0) {
+            use_shift = true;
+        } else {
+            r = std::max(r, new_r);
+        }
+
+        Matrix<long double> first(column_end - column_start + 1, 1);
+        if (!use_shift) {
+            for (size_t i = column_start; i <= std::min(column_end, column_start + band_size - 1); ++i) {
+                first(i - column_start, 0) = A(row_start, i) * A(row_start, column_start);
+            }
+        } else {
+            first = details::shift_riley2(A, band_size, row_start, column_start, row_end, column_end);
+        }
         auto v = left_segment_reflection(first, 0, std::min(2 * band_size, first.height() - 1), 0, false, 1e-20);
         details::mult_right_reflection_banded(A, 2 * band_size, v, row_start, column_start,
                                               std::min(column_start + 2 * band_size, column_end), false, 1e-20);
@@ -411,25 +430,25 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
             }
         }
     }
-    if (details::is_diagonal_banded(A, band_size, row_start, column_start, row_end, column_end, new_eps)) {
-        for (size_t i = row_start; i <= std::min(row_end, column_end); ++i) {
-            if (std::abs(A(i, i)) < eps) {
-                ans.emplace_back(0);
-            } else {
-                ans.emplace_back(std::abs(A(i, i)));
-            }
+    // if (details::is_diagonal_banded(A, band_size, row_start, column_start, row_end, column_end, new_eps)) {
+    for (size_t i = row_start; i <= std::min(row_end, column_end); ++i) {
+        if (std::abs(A(i, i)) < eps) {
+            ans.emplace_back(0);
+        } else {
+            ans.emplace_back(std::abs(A(i, i)));
         }
-        return;
     }
-    if (std::abs(A(row_start, column_start)) < eps) {
-        ans.emplace_back(0);
-    } else {
-        ans.emplace_back(std::abs(A(row_start, column_start)));
-    }
-    long double mn = 1;
-    for (size_t ind = row_start + 1; ind < row_start + band_size; ++ind) {
-        mn = std::min(mn, std::abs(A(row_start, ind)));
-    }
-    apply_banded_qr(A, band_size, ans, row_start + 1, column_start + 1, row_end, column_end, std::max(mn, eps));
+    return;
+    //}
+    // if (std::abs(A(row_start, column_start)) < eps) {
+    //     ans.emplace_back(0);
+    // } else {
+    //     ans.emplace_back(std::abs(A(row_start, column_start)));
+    // }
+    // long double mn = 1;
+    // for (size_t ind = row_start + 1; ind < row_start + band_size; ++ind) {
+    //     mn = std::min(mn, std::abs(A(row_start, ind)));
+    // }
+    // apply_banded_qr(A, band_size, ans, row_start + 1, column_start + 1, row_end, column_end, std::max(mn, eps));
 }
 }  // namespace convolution_svd
