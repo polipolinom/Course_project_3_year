@@ -20,7 +20,7 @@ std::vector<std::pair<std::pair<int, int>, int>> tests_performance_image(const s
                                                                          const std::vector<size_t> &ms,
                                                                          size_t kernel_height, size_t kernel_width,
                                                                          long double max_number) {
-    size_t iterations_count = 1;
+    size_t iterations_count = 5;
 
     std::vector<std::pair<std::pair<int, int>, int>> res;
     for (size_t ind = 0; ind < ns.size(); ++ind) {
@@ -46,12 +46,12 @@ std::vector<std::pair<std::pair<int, int>, int>> tests_performance_image(const s
                 total_time_qr += finish - start;
             }
 
-            {
-                auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                svd_banded_reduction(A);
-                auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                total_time_reduction += finish - start;
-            }
+            // {
+            //     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            //     svd_banded_reduction(A);
+            //     auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            //     total_time_reduction += finish - start;
+            // }
         }
         res.push_back({{total_time_qr / iterations_count, total_time_reduction / iterations_count},
                        total_time / iterations_count});

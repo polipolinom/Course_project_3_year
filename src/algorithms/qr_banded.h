@@ -353,7 +353,7 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
     long double new_eps = 1;
     long double r = 0;
     bool use_shift = false;
-    while (it < constants::MAX_OPERATIONS) {
+    while (operations < constants::MAX_OPERATIONS * (row_end - row_start + 1)) {
         new_eps = 1;
         long double new_r = 0;
         for (size_t ind = row_start; ind <= row_end; ++ind) {
@@ -430,25 +430,25 @@ inline void apply_banded_qr(Matrix<long double>& A, size_t band_size, std::vecto
             }
         }
     }
-    // if (details::is_diagonal_banded(A, band_size, row_start, column_start, row_end, column_end, new_eps)) {
-    for (size_t i = row_start; i <= std::min(row_end, column_end); ++i) {
-        if (std::abs(A(i, i)) < eps) {
-            ans.emplace_back(0);
-        } else {
-            ans.emplace_back(std::abs(A(i, i)));
+    if (details::is_diagonal_banded(A, band_size, row_start, column_start, row_end, column_end, new_eps)) {
+        for (size_t i = row_start; i <= std::min(row_end, column_end); ++i) {
+            if (std::abs(A(i, i)) < eps) {
+                ans.emplace_back(0);
+            } else {
+                ans.emplace_back(std::abs(A(i, i)));
+            }
         }
+        return;
     }
-    return;
-    //}
-    // if (std::abs(A(row_start, column_start)) < eps) {
-    //     ans.emplace_back(0);
-    // } else {
-    //     ans.emplace_back(std::abs(A(row_start, column_start)));
-    // }
-    // long double mn = 1;
-    // for (size_t ind = row_start + 1; ind < row_start + band_size; ++ind) {
-    //     mn = std::min(mn, std::abs(A(row_start, ind)));
-    // }
-    // apply_banded_qr(A, band_size, ans, row_start + 1, column_start + 1, row_end, column_end, std::max(mn, eps));
+    if (std::abs(A(row_start, column_start)) < eps) {
+        ans.emplace_back(0);
+    } else {
+        ans.emplace_back(std::abs(A(row_start, column_start)));
+    }
+    long double mn = 1;
+    for (size_t ind = row_start + 1; ind < row_start + band_size; ++ind) {
+        mn = std::min(mn, std::abs(A(row_start, ind)));
+    }
+    apply_banded_qr(A, band_size, ans, row_start + 1, column_start + 1, row_end, column_end, std::max(mn, eps));
 }
 }  // namespace convolution_svd

@@ -5,8 +5,8 @@
 #include "tests_performance.h"
 
 void performance_tests_image_size(size_t kernel_height, size_t kernel_width, long double max_number) {
-    std::vector<size_t> ns = {1, 1, 1, 1, 1, 1, 1, 1};
-    std::vector<size_t> ms = {25, 50, 75, 100, 125, 150, 175, 200};
+    std::vector<size_t> ns = {1, 1, 1, 1, 1, 1};
+    std::vector<size_t> ms = {25, 50, 100, 5000, 1000, 5000};
 
     assert(ms.size() == ns.size());
 
@@ -18,11 +18,11 @@ void performance_tests_image_size(size_t kernel_height, size_t kernel_width, lon
         std::cout << time_ms[i].first.first << ", ";
     }
     std::cout << std::endl;
-    std::cout << "Reduction to bidiagonal time ms:\n";
-    for (size_t i = 0; i < ns.size(); i++) {
-        std::cout << time_ms[i].first.second << ", ";
-    }
-    std::cout << std::endl;
+    // std::cout << "Reduction to bidiagonal time ms:\n";
+    // for (size_t i = 0; i < ns.size(); i++) {
+    //     std::cout << time_ms[i].first.second << ", ";
+    // }
+    // std::cout << std::endl;
     std::cout << "Original algo time ms:\n";
     for (size_t i = 0; i < ns.size(); i++) {
         std::cout << time_ms[i].second << ", ";
