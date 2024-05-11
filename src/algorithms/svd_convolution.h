@@ -10,7 +10,7 @@
 
 namespace convolution_svd {
 using namespace svd_computation;
-inline std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long double>>>& kernels,
+inline std::vector<long double> svd_convolution_1d(const std::vector<std::vector<Matrix<long double>>>& kernels,
                                                    const size_t signal_size, Matrix<long double>* left_basis = nullptr,
                                                    Matrix<long double>* right_basis = nullptr, const size_t stride = 1,
                                                    bool full_basis = false,
