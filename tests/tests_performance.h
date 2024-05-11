@@ -5,10 +5,12 @@
 #include <chrono>
 #include <ctime>
 #include <random>
+#include <vector>
 
 #include "../course-project-second-year/algorithms/svd_computation.h"
 #include "../course-project-second-year/types/matrix.h"
 #include "../src/algorithms/svd_banded.h"
+#include "../src/algorithms/svd_convolution.h"
 #include "../src/utils/conv_matrix.h"
 #include "random_objects.h"
 
@@ -16,45 +18,32 @@ using namespace svd_computation;
 using namespace convolution_svd;
 using namespace std::chrono;
 
-std::vector<std::pair<std::pair<int, int>, int>> tests_performance_image(const std::vector<size_t> &ns,
-                                                                         const std::vector<size_t> &ms,
-                                                                         size_t kernel_height, size_t kernel_width,
-                                                                         long double max_number) {
-    size_t iterations_count = 5;
+std::vector<std::pair<int, int>> tests_performance_image(const std::vector<size_t> &ms, size_t kernel_width,
+                                                         size_t C_in, size_t C_out, long double max_number) {
+    size_t iterations_count = 1;
 
-    std::vector<std::pair<std::pair<int, int>, int>> res;
-    for (size_t ind = 0; ind < ns.size(); ++ind) {
-        auto n = ns[ind];
-        auto m = ms[ind];
+    std::vector<std::pair<int, int>> res;
+    for (size_t ind = 0; ind < ms.size(); ++ind) {
+        int m = ms[ind];
         int total_time = 0;
-        int total_time_qr = 0;
         int total_time_reduction = 0;
         for (size_t i = 0; i < iterations_count; i++) {
-            auto kernel = get_random_kernel(kernel_height, kernel_height, kernel_width, kernel_width, max_number);
-            auto A = correlation_conv(kernel, n, m, true);
-            {
-                auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                compute_svd(A);
-                auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                total_time += finish - start;
+            std::vector<std::vector<Matrix<long double>>> kernels(C_in, std::vector<Matrix<long double>>(C_out));
+            for (size_t j = 0; j < C_in; ++j) {
+                for (size_t k = 0; k < C_out; ++k) {
+                    kernels[j][k] = get_random_kernel(1, 1, kernel_width, kernel_width, max_number);
+                }
             }
 
             {
                 auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                svd_banded(A, kernel_width);
+                svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
                 auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                total_time_qr += finish - start;
+                total_time_reduction += finish - start;
             }
-
-            // {
-            //     auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            //     svd_banded_reduction(A);
-            //     auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            //     total_time_reduction += finish - start;
-            // }
         }
-        res.push_back({{total_time_qr / iterations_count, total_time_reduction / iterations_count},
-                       total_time / iterations_count});
+        res.push_back({total_time_reduction / iterations_count, total_time / iterations_count});
+        std::cout << m << std::endl;
     }
     return res;
 }

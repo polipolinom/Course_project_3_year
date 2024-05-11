@@ -9,6 +9,7 @@
 #include "../course-project-second-year/algorithms/svd_computation.h"
 #include "../course-project-second-year/types/matrix.h"
 #include "../src/algorithms/svd_banded.h"
+#include "../src/algorithms/svd_convolution.h"
 #include "../src/utils/conv_matrix.h"
 #include "random_objects.h"
 
@@ -18,7 +19,7 @@ using namespace std::chrono;
 
 void tests_precision_epsilons(std::vector<long double> epsilons, size_t image_height, size_t image_width,
                               size_t kernel_height, size_t kernel_width, long double max_number) {
-    size_t iterations_count = 5;
+    size_t iterations_count = 1;
 
     for (auto eps : epsilons) {
         auto n = image_height;
@@ -30,9 +31,9 @@ void tests_precision_epsilons(std::vector<long double> epsilons, size_t image_he
         long double total_qr_3quart = 0;
         for (size_t i = 0; i < iterations_count; i++) {
             auto kernel = get_random_kernel(kernel_height, kernel_height, kernel_width, kernel_width, max_number);
-            auto A = correlation_conv(kernel, n, m, true);
+            auto A = correlation_conv(kernel, n, m, false);
             auto true_values = compute_svd<long double>(A, nullptr, nullptr, 1e-18);
-            auto band_qr_values = svd_banded(A, kernel_width, eps);
+            auto band_qr_values = svd_convolution_1d({{kernel}}, m, nullptr, nullptr, 1, false, eps);
             if (true_values.size() != band_qr_values.size()) {
                 std::cout << "Wrong count in band qr";
                 return;

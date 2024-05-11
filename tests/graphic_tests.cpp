@@ -4,27 +4,19 @@
 
 #include "tests_performance.h"
 
-void performance_tests_image_size(size_t kernel_height, size_t kernel_width, long double max_number) {
-    std::vector<size_t> ns = {1, 1, 1, 1, 1, 1};
-    std::vector<size_t> ms = {25, 50, 100, 5000, 1000, 5000};
+void performance_tests_image_size(size_t kernel_width, size_t C_in, size_t C_out, long double max_number) {
+    std::vector<size_t> ms = {100, 500, 1000, 2500, 5000, 7500, 10000, 12500, 15000, 16000};
 
-    assert(ms.size() == ns.size());
-
-    std::cout << "kernel height: " << kernel_height << " kernel width: " << kernel_width
+    std::cout << " kernel width: " << kernel_width << " C_in: " << C_in << " C_out: " << C_out
               << " max number: " << max_number << std::endl;
-    auto time_ms = tests_performance_image(ns, ms, kernel_height, kernel_width, max_number);
-    std::cout << "Just QR ms:\n";
-    for (size_t i = 0; i < ns.size(); i++) {
-        std::cout << time_ms[i].first.first << ", ";
+    auto time_ms = tests_performance_image(ms, kernel_width, C_in, C_out, max_number);
+    std::cout << "Band reduction ms:\n";
+    for (size_t i = 0; i < ms.size(); i++) {
+        std::cout << time_ms[i].first << ", ";
     }
     std::cout << std::endl;
-    // std::cout << "Reduction to bidiagonal time ms:\n";
-    // for (size_t i = 0; i < ns.size(); i++) {
-    //     std::cout << time_ms[i].first.second << ", ";
-    // }
-    // std::cout << std::endl;
     std::cout << "Original algo time ms:\n";
-    for (size_t i = 0; i < ns.size(); i++) {
+    for (size_t i = 0; i < ms.size(); i++) {
         std::cout << time_ms[i].second << ", ";
     }
 }

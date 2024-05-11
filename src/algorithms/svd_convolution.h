@@ -10,11 +10,11 @@
 
 namespace convolution_svd {
 using namespace svd_computation;
-std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long double>>> kernels,
-                                            const size_t signal_size, Matrix<long double>* left_basis = nullptr,
-                                            Matrix<long double>* right_basis = nullptr, const size_t stride = 1,
-                                            bool full_basis = false,
-                                            const long double eps = constants::DEFAULT_EPSILON) {
+inline std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long double>>> kernels,
+                                                   const size_t signal_size, Matrix<long double>* left_basis = nullptr,
+                                                   Matrix<long double>* right_basis = nullptr, const size_t stride = 1,
+                                                   bool full_basis = false,
+                                                   const long double eps = constants::DEFAULT_EPSILON) {
     assert(signal_size > 0);
     size_t C_in = kernels.size();
     assert(C_in > 0);
@@ -48,7 +48,7 @@ std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix<long 
         Matrix<long double> A(signal_size - kernel_size + 1, kernel_size);
         for (size_t i = 0; i < A.height(); i += stride) {
             for (size_t j = 0; j < A.width(); ++j) {
-                A(i, j + i) = kernel(0, j);
+                A(i, j) = kernel(0, j);
             }
         }
         auto values = svd_banded_reduction(A, left_basis, right_basis, eps);
