@@ -8,7 +8,7 @@
 
 namespace convolution_svd {
 using namespace svd_computation;
-std::vector<std::vector<Matrix<long double>>> clip_singular_1d(std::vector<std::vector<Matrix<long double>>> kernels,
+std::vector<std::vector<Matrix<long double>>> clip_singular_1d(std::vector<std::vector<Matrix<long double>>>& kernels,
                                                                const size_t signal_size, const size_t stride = 1,
                                                                const long double lower_bound = 0,
                                                                const long double upper_bound = 1,

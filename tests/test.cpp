@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
     */
     it = 0;
     freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
     int C_in, C_out, kernel_width, m;
     std::cin >> C_in >> C_out >> kernel_width >> m;
     std::vector<std::vector<Matrix<long double>>> kernels(C_in, std::vector<Matrix<long double>>(C_out));
@@ -28,10 +29,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
-    auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    std::cout << finish - start;
+    auto values = svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
+    for (auto i : values) {
+        std::cout << std::fixed << std::setprecision(20) << i << " ";
+    }
     // size_t kernel_width = 64;
     // size_t C_in = 1;
     // size_t C_out = 16;
