@@ -35,16 +35,19 @@ std::vector<std::pair<int, int>> tests_performance_image(const std::vector<size_
                 }
             }
 
+            Matrix<long double> left_basis;
+            Matrix<long double> right_basis;
+
             {
                 auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
+                svd_convolution_1d(kernels, m, &left_basis, &right_basis, 1, false);
                 auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
                 total_time += finish - start;
             }
 
             {
                 auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                svd_convolution_1d(kernels, m, nullptr, nullptr, 1, true);
+                svd_convolution_1d(kernels, m, &left_basis, &right_basis, 1, true);
                 auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
                 total_time_full += finish - start;
             }
