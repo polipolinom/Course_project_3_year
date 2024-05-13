@@ -14,29 +14,29 @@ int main(int argc, char **argv) {
     return RUN_ALL_TESTS();
     */
     it = 0;
-    freopen("input.txt", "r", stdin);
-    freopen("output.txt", "w", stdout);
-    int C_in, C_out, kernel_width, m;
-    std::cin >> C_in >> C_out >> kernel_width >> m;
-    std::vector<std::vector<Matrix<long double>>> kernels(C_in, std::vector<Matrix<long double>>(C_out));
-    for (size_t j = 0; j < C_in; ++j) {
-        for (size_t k = 0; k < C_out; ++k) {
-            Matrix<long double> now(1, kernel_width);
-            for (size_t i = 0; i < kernel_width; ++i) {
-                std::cin >> now(0, i);
-            }
-            kernels[j][k] = now;
-        }
-    }
+    // freopen("input.txt", "r", stdin);
+    // freopen("output.txt", "w", stdout);
+    // int C_in, C_out, kernel_width, m;
+    // std::cin >> C_in >> C_out >> kernel_width >> m;
+    // std::vector<std::vector<Matrix<long double>>> kernels(C_in, std::vector<Matrix<long double>>(C_out));
+    // for (size_t j = 0; j < C_in; ++j) {
+    //     for (size_t k = 0; k < C_out; ++k) {
+    //         Matrix<long double> now(1, kernel_width);
+    //         for (size_t i = 0; i < kernel_width; ++i) {
+    //             std::cin >> now(0, i);
+    //         }
+    //         kernels[j][k] = now;
+    //     }
+    // }
 
-    auto values = svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
-    for (auto i : values) {
-        std::cout << std::fixed << std::setprecision(20) << i << " ";
-    }
-    // size_t kernel_width = 64;
-    // size_t C_in = 1;
-    // size_t C_out = 16;
-    // performance_tests_image_size(kernel_width, C_in, C_out, 1.0);
+    // auto values = svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
+    // for (auto i : values) {
+    //     std::cout << std::fixed << std::setprecision(20) << i << " ";
+    // }
+    size_t kernel_width = 10;
+    size_t C_in = 4;
+    size_t C_out = 4;
+    performance_tests_image_size(kernel_width, C_in, C_out, 1.0);
     // size_t image_height = 1;
     // size_t image_width = 500;
     // long double max_number = 1;

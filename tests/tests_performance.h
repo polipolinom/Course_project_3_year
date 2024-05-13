@@ -20,13 +20,13 @@ using namespace std::chrono;
 
 std::vector<std::pair<int, int>> tests_performance_image(const std::vector<size_t> &ms, size_t kernel_width,
                                                          size_t C_in, size_t C_out, long double max_number) {
-    size_t iterations_count = 1;
+    size_t iterations_count = 2;
 
     std::vector<std::pair<int, int>> res;
     for (size_t ind = 0; ind < ms.size(); ++ind) {
         int m = ms[ind];
+        int total_time_full = 0;
         int total_time = 0;
-        int total_time_reduction = 0;
         for (size_t i = 0; i < iterations_count; i++) {
             std::vector<std::vector<Matrix<long double>>> kernels(C_in, std::vector<Matrix<long double>>(C_out));
             for (size_t j = 0; j < C_in; ++j) {
@@ -39,10 +39,17 @@ std::vector<std::pair<int, int>> tests_performance_image(const std::vector<size_
                 auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
                 svd_convolution_1d(kernels, m, nullptr, nullptr, 1, false);
                 auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                total_time_reduction += finish - start;
+                total_time += finish - start;
+            }
+
+            {
+                auto start = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+                svd_convolution_1d(kernels, m, nullptr, nullptr, 1, true);
+                auto finish = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+                total_time_full += finish - start;
             }
         }
-        res.push_back({total_time_reduction / iterations_count, total_time / iterations_count});
+        res.push_back({total_time_full / iterations_count, total_time / iterations_count});
         std::cout << m << std::endl;
     }
     return res;
