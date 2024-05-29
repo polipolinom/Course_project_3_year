@@ -47,6 +47,18 @@ inline std::vector<long double> svd_banded(Matrix<long double> A, size_t band_wi
 inline std::vector<long double> svd_banded_reduction(Matrix<long double>& A, Matrix<long double>* left_basis = nullptr,
                                                      Matrix<long double>* right_basis = nullptr,
                                                      const long double eps = constants::DEFAULT_EPSILON) {
+    if (A.width() == 1) {
+        std::vector<long double> ans = {};
+        for (size_t i = 0; i < A.height(); ++i) {
+            if (A(i, 0) < 0.0) {
+                ans.push_back(-A(i, 0));
+            } else {
+                ans.push_back(A(i, 0));
+            }
+        }
+        details::sort_singular_values(ans, nullptr, right_basis);
+        return ans;
+    }
     band_diag_reduction(A, left_basis, right_basis, eps);
     std::vector<long double> diag;
     std::vector<long double> subdiag;
