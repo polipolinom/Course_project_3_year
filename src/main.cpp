@@ -12,12 +12,9 @@
 using namespace convolution_svd;
 using namespace svd_computation;
 
-int it;
-
 int main() {
-    it = 0;
-
-    Matrix<long double> kernel1 = {{1, 2, 3}, {4, 5, 6}};
+    Matrix<long double> kernel1 = {{1, 2, 3}, 
+                                   {4, 5, 6}};
     Matrix<long double> left_basis;
     Matrix<long double> right_basis;
     Matrix<long double> A = correlation_conv({{kernel1}, {kernel1}}, 4, 4);
@@ -28,9 +25,11 @@ int main() {
         }
         std::cout << "],\n";
     }
-    auto values = svd_convolution_2d({{kernel1}, {kernel1}}, 4, 4, &left_basis, &right_basis, 1);
-    for (auto i : values) {
-        std::cout << i << " ";
+    auto kernels = clip_singular_2d({{kernel1}, {kernel1}}, 4, 4, 1, -1, 10000);
+    for (auto i : kernels) {
+        for (auto j : i) {
+            std::cout << j << std::endl << std::endl;
+        }
     }
     return 0;
 }

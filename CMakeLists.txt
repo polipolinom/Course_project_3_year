@@ -4,10 +4,10 @@ project(course_project_3 CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# add_library(course_project_3_lib)
+#add_library(course_project_3_lib)
 
 add_executable(course_project_3 src/main.cpp)
-# target_link_libraries(course_project_3 course_project_3_lib)
+#target_link_libraries(course_project_3 course_project_3_lib)
 
 add_executable(course_project_3_test tests/test.cpp tests/graphic_tests.cpp tests/random_objects.cpp)
 

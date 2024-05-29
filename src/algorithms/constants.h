@@ -1,7 +1,5 @@
 #pragma once
 
-extern int it;
-
 namespace convolution_svd {
 namespace constants {
 inline constexpr long double DEFAULT_EPSILON = 1e-12;
