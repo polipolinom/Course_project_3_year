@@ -6,6 +6,21 @@
 Для использования данной библиотеки необходимо установить [данную библиотеку](https://github.com/polipolinom/SVD_course_project_2_year) и добавить в свой проект все header-файлы из `src\algorithms`
 
 ## Работа с библиотекой
+
+Пример использованию функции
+```
+Matrix<long double> kernel1 = {{1, 2, 3}};
+Matrix<long double> kernel2 = {{4, 5, 6}};
+Matrix<long double> left_basis;
+Matrix<long double> right_basis;
+auto values = svd_convolution_1d({{kernel1, kernel2}}, 5, 
+                                 &left_basis, &right_basis, 
+                                 2, True, 1e-16);
+for (auto i : values) {
+    std::cout << i << " ";
+}
+```
+
 `std::vector<long double> svd_convolution_1d(std::vector<std::vector<Matrix>>& kernels, size_t signal_size, Matrix* left_basis, Matrix* right_basis, size_t stride, bool full_basis, long double eps)` возвращает сингулярные числа свертки с ядром `kernels`, примененной к матрице размером $1 \times$ `signal_size`, со страйдом `stride`. Записывает полные базисы (если `full_basis` равно `True`) или базисы для восстановления ядра в `left_basis` и `right_basis`. Вычисления выполняются с точностью `eps`
 
 `std::vector<long double> svd_convolution_2d(std::vector<std::vector<Matrix>>& kernels, size_t image_height, size_t image_width, Matrix* left_basis, Matrix* right_basis, size_t stride, bool full_basis, long double eps)` возвращает сингулярные числа свертки с ядром `kernels`, примененной к матрице размером `image_height` $\times$ `image_width`, со страйдом `stride`. Записывает полные базисы (если `full_basis` равно `True`) или базисы для восстановления ядра в `left_basis` и `right_basis`. Вычисления выполняются с точностью `eps`.
